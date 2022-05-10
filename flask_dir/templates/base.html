@@ -1,0 +1,21 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} - Flaskr</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<nav>
+  <h1>Spotify API</h1>
+  <ul>
+    {% if session['display_name'] %}
+      <li><span>your name is {{ session['display_name'] }}</span>
+      <li><a href="{{ url_for('routes_file.getPlaylists') }}"><span>get playlists here</span></a>
+        <!-- <li><a href="{{ url_for('routes_file.login') }}">Log Out</a> -->
+    {% else %}
+        <li><a href="{{ url_for('routes_file.login') }}">Log In</a>
+    {% endif %}
+  </ul>
+</nav>
+<section class="content">
+  <header>
+    {% block header %}{% endblock %}
+  </header>
+  {% block content %}{% endblock %}
+</section>

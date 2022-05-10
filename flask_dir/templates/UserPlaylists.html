@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %} User Playlists {% endblock %}</h1>
+    <h1>Hello {{session['display_name']}}</h1>
+    <h2>Here you can find your last 50 playlists!</h2>
+    <h2>Or reload <a href="{{ url_for('routes_file.getPlaylists', refresh = True)}}">
+        <span>here!</span></a></h2>
+    <section>
+        {% for PL in data['items']: %}
+        <div>
+            <a href="{{ url_for('routes_file.playlistDetails', uri= PL['uri'], href= PL['href']) }}">
+                {% if PL['images']|length > 0 %}
+                <img src= {{ PL['images'][0]['url'] }} height="4%", width="4%">
+                {% endif %}
+                <span>
+                    {{ PL['name'] }}
+                </span>
+            </a>
+        </div>
+        {% endfor %}
+
+    </section>
+    
+{% endblock %}
