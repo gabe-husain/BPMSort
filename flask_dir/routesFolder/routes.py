@@ -2,10 +2,10 @@ from flask import Flask, Blueprint, redirect, request_finished, session, request
 import sys
 import os
 import time
+from routesFolder.authScripts import run_Auth, second_Auth, getNewToken
 
 sys.path.append("../")
 
-from main1 import run_Auth, second_Auth, getNewToken
 from apiRequests import getUserPlaylists, getUserProfile, getPlaylistDetails, generateBPM, createBPM
 
 secret_key = os.getenv('SECRET')
@@ -60,9 +60,11 @@ def getProfile():
 #       Routes
 #
 
+@routes_file.route('/UserPlaylists', methods = ['POST', 'GET'])
 @routes_file.route('/UserPlaylists')
 def getPlaylists():
     refresh = request.args.get("refresh", default=False, type=bool)
+    onlyUserCreated = request.args.get("omp", default=False, type=bool)
     try:
         token_info = getToken()
     except:
@@ -72,7 +74,22 @@ def getPlaylists():
     if not session.get('tokens') or refresh:
 
         print("200")
-        playlists = getUserPlaylists(session['headers'], 75) # returns dictionary
+        # wait for REDIS implementation
+        playlists = getUserPlaylists(session['headers'], 50) # returns dictionary
+
+        if request.method == 'POST':
+            if 'omp' in request.form:
+                for index, playlist in enumerate(playlists['items']):
+                    if playlist['owner']['id'] != session['id']:
+                        del playlists['items'][index]
+            elif 'refresh' in request.form:
+                pass
+                # When REDIS is implemented this can be changed
+                # playlists = getUserPlaylists(session['headers'], 50)
+            else:
+                pass
+            
+
         printable = ''
             
         for i in playlists['items']:

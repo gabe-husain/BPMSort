@@ -3,9 +3,11 @@
 {% block content %}
     <h1>{% block title %} User Playlists {% endblock %}</h1>
     <h1>Hello {{session['display_name']}}</h1>
-    <h2>Here you can find your last 50 playlists!</h2>
-    <h2>Or reload <a href="{{ url_for('routes_file.getPlaylists', refresh = True)}}">
-        <span>here!</span></a></h2>
+    <h2>Here you can find your last {{ data['items']|length }} playlists!</h2>
+    <form method="POST" action="">
+        <input type="submit" id="refresh" name="BPM" value="Refresh Here">
+        <input type="submit" id="omp" name="omp" value="Get Only My Playlists">
+    </form>
     <section>
         {% for PL in data['items']: %}
         <div>
