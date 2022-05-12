@@ -64,49 +64,49 @@ def getProfile():
 @routes_file.route('/UserPlaylists', methods = ['POST', 'GET'])
 def getPlaylists():
     refresh = request.args.get("refresh", default=False, type=bool)
-    onlyUserCreated = request.args.get("omp", default=False, type=bool)
+    trackTotal = 50
+    offset = request.args.get("offset", default=0, type=int)
+
     try:
         token_info = getToken()
     except:
         print("no token", session['req_token'])
         return redirect(url_for('routes_file.login', external=True))
+
+    # wait for REDIS implementation
     
-    if not session.get('tokens') or refresh:
+    playlists, nextStatus = getUserPlaylists(session['headers'], trackTotal, offset) 
 
-        print("200")
-        # wait for REDIS implementation
-        playlists = getUserPlaylists(session['headers'], 50) # returns dictionary
+    if request.method == 'POST':
+        if 'omp' in request.form:
+            for index, playlist in enumerate(playlists['items']):
+                if playlist['owner']['id'] != session['id']:
+                    del playlists['items'][index]
+        elif 'refresh' in request.form:
+            pass
+            # When REDIS is implemented this can be changed
+            # playlists = getUserPlaylists(session['headers'], 50)
+        else:
+            pass
+        
+    data = playlists
 
-        if request.method == 'POST':
-            if 'omp' in request.form:
-                for index, playlist in enumerate(playlists['items']):
-                    if playlist['owner']['id'] != session['id']:
-                        del playlists['items'][index]
-            elif 'refresh' in request.form:
-                pass
-                # When REDIS is implemented this can be changed
-                # playlists = getUserPlaylists(session['headers'], 50)
-            else:
-                pass
-            
+    # Create potential offset
+    potentialOffset = offset + trackTotal
 
-        printable = ''
-            
-        for i in playlists['items']:
-            printable += i['name']
-            printable += str(i['tracks']['total'])
-            printable += '\n'
-        printable += str(playlists['total'])
-        data = playlists
+    print(nextStatus)
 
-    return render_template('UserPlaylists.html', data= data)
+    return render_template(
+        'UserPlaylists.html', 
+        data=data, 
+        offerOffset = nextStatus,
+        offset = potentialOffset )
 
 @routes_file.route('/playlist')
 @routes_file.route('/playlist', methods = ['POST', 'GET'])
 def playlistDetails():
-    playlistUri = request.args.get("uri")
     playlistHref = request.args.get("href")
-    playlistData = getPlaylistDetails(playlistUri, playlistHref, session['headers'])
+    playlistData = getPlaylistDetails(playlistHref, session['headers'])
     BPM = False
     GEN = False
     generatedPL = {}

@@ -3,7 +3,16 @@
 {% block content %}
     <h1>{% block title %} User Playlists {% endblock %}</h1>
     <h1>Hello {{session['display_name']}}</h1>
-    <h2>Here you can find your last {{ data['items']|length }} playlists!</h2>
+    <h2>Here you can find your {% if offset: %}
+            next
+        {% else %}
+            last
+        {% endif %} {{ data['items']|length }} playlists!</h2>
+    {% if offerOffset: %}
+        <a href="{{ url_for('routes_file.getPlaylists', offset = offset) }}">
+            <input type="submit" value="Load next group of playlists">
+        </a>
+    {% endif %}
     <form method="POST" action="">
         <input type="submit" id="refresh" name="BPM" value="Refresh Here">
         <input type="submit" id="omp" name="omp" value="Get Only My Playlists">
@@ -11,7 +20,7 @@
     <section>
         {% for PL in data['items']: %}
         <div>
-            <a href="{{ url_for('routes_file.playlistDetails', uri= PL['uri'], href= PL['href']) }}">
+            <a href="{{ url_for('routes_file.playlistDetails', href= PL['href']) }}">
                 {% if PL['images']|length > 0 %}
                 <img src= {{ PL['images'][0]['url'] }} height="4%", width="4%">
                 {% endif %}
