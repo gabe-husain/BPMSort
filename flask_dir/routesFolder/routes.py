@@ -93,12 +93,13 @@ def playlistDetails():
     BPM = False
     GEN = False
     generatedPL = {}
-    listOfBPM =[]
+    listOfBPM = []
+    dictOfDetails = {}
     if request.method == 'POST':
         if 'BPM' in request.form:
-            generatedPL, listOfURI, listOfBPM = generateBPM(playlistData, session['headers'])
+            generatedPL, listOfURI, listOfBPM, dictOfDetails = generateBPM(playlistData, session['headers'])
         elif 'GEN' in request.form:
-            generatedPL, listOfURI, listOfBPM = generateBPM(playlistData, session['headers'])
+            generatedPL, listOfURI, listOfBPM, dictOfDetails = generateBPM(playlistData, session['headers'])
             createBPM(listOfURI, playlistData['name'], session['headers'])
         else:
             pass
@@ -107,6 +108,7 @@ def playlistDetails():
         'PlaylistDetails.html', 
         playlistData=playlistData,
         generatedPL=generatedPL,
+        dictOfDetails=dictOfDetails,
         listOfBPM=listOfBPM
         )
 

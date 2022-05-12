@@ -4,6 +4,9 @@ import requests
 import os
 from urllib.parse import quote, urlsplit, parse_qs
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 CLIENT = os.getenv('CLIENT_ID')
 SECRET = os.getenv('CLIENT_SECRET')

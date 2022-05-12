@@ -10,6 +10,12 @@
             <input type="submit" id="GEN" name="GEN" value="Create BPM Playlist">
         </form>
         {% if generatedPL|length > 0 %}
+            {% for key in dictOfDetails: %}
+                <div>
+                    <span>{{ key }}: </span> <span>{{ dictOfDetails[key] }} </span>
+                </div>
+                
+            {% endfor %}
             {% if generatedPL|length > 0 %}
                 {% for Track in generatedPL: %}
                 <div>

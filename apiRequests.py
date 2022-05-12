@@ -262,26 +262,49 @@ def generateBPM(playlistData=dict, header=dict):
                 "ids" : listOfTrackIDs
                 }
             )
+
+        # Create cool list of details
+        dictOfDetails = {}
         
         response['audio_features'].sort(key=itemgetter('tempo'))
-        listOfTrackIDs = []
+
+        # Creating item lists
         listOfBPM = []
+        listOfDanceability = []
+        listOfEnergy = []
+        listOfLoudness = []
+
+        listOfTrackIDs = []
+        
         trackNumber = 0
+
         for track in response['audio_features']:
-            listOfTrackIDs.append(track['id'])
+            listOfDanceability.append(track['danceability'])
+            listOfEnergy.append(track['energy'])
             listOfBPM.append(track['tempo'])
+            listOfLoudness.append(track['loudness'])
+
+            listOfTrackIDs.append(track['id'])
             trackNumber += 1
         # sorted list of IDs
         print(listOfTrackIDs)
         
         newTracks = sorted(playlistData['tracks']['items'], key=lambda x: listOfTrackIDs.index(x['track']['id']))
 
+        # Finalize cool list
+        dictOfDetails['averageBPM'] = sum(listOfBPM)/len(listOfBPM)
+        dictOfDetails['averageDanceability'] = sum(listOfDanceability)/len(listOfDanceability) * 100
+        dictOfDetails['averageEnergy'] = sum(listOfEnergy)/len(listOfEnergy) * 100
+        dictOfDetails['averageLoudness'] = sum(listOfLoudness)/len(listOfLoudness) + 10
+
+        print(dictOfDetails)
+
         # extract URI
         listOfURI = []
         for track in newTracks:
             listOfURI.append(track['track']['uri'])
 
-        return newTracks, listOfURI, listOfBPM
+        return newTracks, listOfURI, listOfBPM, dictOfDetails
     
     else:
         return {}
