@@ -1,13 +1,12 @@
 from operator import itemgetter
 import os
 from typing import Any
+from urllib import response
 from urllib.parse import quote, urlsplit, parse_qs
 import json
 from flask import url_for, redirect, session
 import requests
 import time
-
-from main1 import CLIENT, SECRET
 
 API_URL = 'https://api.spotify.com/v1/'
 
@@ -119,7 +118,7 @@ def getRemainingPlaylists(header=dict, number=int, offset = 0):
 
     return working_response
 
-def getUserPlaylists(header=dict, number = 50):
+def getUserPlaylists(header=dict, number = 50, offset = 0):
     '''
     takes in header and non-null number of playlists to return, 
     updates main response and returns the amount specified by repeating api calls
@@ -144,15 +143,17 @@ def getUserPlaylists(header=dict, number = 50):
     '''
     assert number > 0
 
-    # if there are less than 50 plaulists requested, then this will work only once
+    # if there are less than 50 playlists requested, then this will work only once
     if number <= 50:
-        working_response = getRemainingPlaylists(header, number)
+        working_response = getRemainingPlaylists(header, number, offset)
+        
+        next_status = working_response['next']
     
     # otherwise, multiple api calls
     
     else:
         # First API Call
-        working_response = getRemainingPlaylists(header, 50)
+        working_response = getRemainingPlaylists(header, 50, offset)
         number -= 50
 
         next_status = working_response['next']
@@ -162,14 +163,15 @@ def getUserPlaylists(header=dict, number = 50):
                     next_status, 
                     headers=header
                 )
-            for i in range(min(number, 50)):
-                working_response['items'].append(decoded_page['items'][i])
-                number -= 1
+            
+            working_response['items'] += decoded_page['items'][:min(number, 50)]
+            number -= len(decoded_page['items'][:min(number, 50)])
+
             next_status = decoded_page['next']
             print(number)
             
 
-    return working_response
+    return working_response, next_status
 
 def getUserProfile(header=dict):
     '''
@@ -202,7 +204,7 @@ def getUserProfile(header=dict):
         )
     return response
 
-def getPlaylistDetails(uri=str, href=str, header=dict):
+def getPlaylistDetails(href=str, header=dict):
     '''
     Takes in an api endpoint for a specific playlist
     Gets a playlist and subsequent tracks and data
@@ -245,76 +247,187 @@ def getPlaylistDetails(uri=str, href=str, header=dict):
         href, 
         headers=header
     )
+    full_response = response
+    next = response['tracks']['next']
+    while next != None:
+        response = tryGetSpotifyRequest(
+            next, 
+            headers=header)
+        next = response['next']
+        full_response['tracks']['items'] += response['items']
+
+    return full_response
+
+def getAudioFeatures(listOfTrackIDs=list, header=dict):
+    '''
+    Takes in a list of tracks, and returns a dictionary containing their audio features
+
+    :param listOfTrackIDs: List of Tracks as returned by the playlist endpoint smaller than 100
+    :type listOfTrackIDs: list
+    :param header: headers for get request
+    :type header: dict
+    
+    :return: Dictionary of list of audio features
+    :rtype: dict
+
+    ---
+
+
+    '''
+    stringListOfTrackIDs = ""
+
+    for track in listOfTrackIDs:
+        try:
+            stringListOfTrackIDs += track['track']['id'] + ","
+        except:
+            pass
+
+    # remove comma
+    stringListOfTrackIDs = stringListOfTrackIDs[:-1]
+    print(stringListOfTrackIDs)
+
+    response = tryGetSpotifyRequest(
+        API_URL + 'audio-features', 
+        headers=header, 
+        params={
+            "ids" : stringListOfTrackIDs
+            }
+        )
+    
     return response
+    
+
+def generateDetails(
+    PLItems=list, 
+    sortBy='tempo',
+    details=list, 
+    averageIgnore=list, 
+    header=dict):
+    '''
+    
+    
+    '''
+
+ 
+    # generate trackID list for spotify request
+    
+    # Clean PLItems
+    
+    PLItemsLength = len(PLItems)
+    fullResponse = {'audio_features': []}
+    offset = 0
+
+    while PLItemsLength > 0:
+
+        # set current playlist items to handle
+        currPLItems = PLItems[offset : offset + min(100, PLItemsLength)]
+        print(currPLItems == PLItems[100 : 200], offset, offset + min(100, PLItemsLength))
+        
+        
+        response = getAudioFeatures(currPLItems, header=header)
+        # add to complete response
+        fullResponse['audio_features'] += response['audio_features']
+        # onto the next 100
+        PLItemsLength -= min(100, PLItemsLength)
+        offset += 100
+
+        
+
+    # sort audio features
+    audio_features = sorted(fullResponse['audio_features'], key=itemgetter(sortBy))
+    dictOfDetails = createDictOfDetails(audio_features, details, averageIgnore=averageIgnore)
+
+
+    listOfTrackIDs = dictOfDetails['id']
+
+    # sort playlist items for representation
+    newTracks = sorted(PLItems, key=lambda x: listOfTrackIDs.index(x['track']['id']))
+
+    # Finalize cool list
+    SortedBy = dictOfDetails[sortBy]
+    dictOfDetails['average' + sortBy] = sum(SortedBy)/len(SortedBy)
+
+    print(dictOfDetails)
+
+    # extract URI
+    listOfURI = []
+    for track in newTracks:
+        listOfURI.append(track['track']['uri'])
+
+    return newTracks, listOfURI, dictOfDetails
 
 def generateBPM(playlistData=dict, header=dict):
+    '''
+    Creates BPM playlist and returns stuff
+    '''
+    if playlistData['tracks']['items']:
+        PLItems = playlistData['tracks']['items']
 
-    listOfTrackIDs = ""
-    if len(playlistData['tracks']['items']) < 100:
-        for track in playlistData['tracks']['items']:
-            listOfTrackIDs += track['track']['id'] + ","
-        listOfTrackIDs = listOfTrackIDs[:-1]
-        print(listOfTrackIDs)
-        response = tryGetSpotifyRequest(
-            API_URL + 'audio-features', 
-            headers=header, 
-            params={
-                "ids" : listOfTrackIDs
-                }
-            )
-
-        # Create cool list of details
-        dictOfDetails = {}
-        
-        response['audio_features'].sort(key=itemgetter('tempo'))
-
-        # Creating item lists
-        listOfBPM = []
-        listOfDanceability = []
-        listOfEnergy = []
-        listOfLoudness = []
-
-        listOfTrackIDs = []
-        
-        trackNumber = 0
-
-        for track in response['audio_features']:
-            listOfDanceability.append(track['danceability'])
-            listOfEnergy.append(track['energy'])
-            listOfBPM.append(track['tempo'])
-            listOfLoudness.append(track['loudness'])
-
-            listOfTrackIDs.append(track['id'])
-            trackNumber += 1
-        # sorted list of IDs
-        print(listOfTrackIDs)
-        
-        newTracks = sorted(playlistData['tracks']['items'], key=lambda x: listOfTrackIDs.index(x['track']['id']))
-
-        # Finalize cool list
-        dictOfDetails['averageBPM'] = sum(listOfBPM)/len(listOfBPM)
-        dictOfDetails['averageDanceability'] = sum(listOfDanceability)/len(listOfDanceability) * 100
-        dictOfDetails['averageEnergy'] = sum(listOfEnergy)/len(listOfEnergy) * 100
-        dictOfDetails['averageLoudness'] = sum(listOfLoudness)/len(listOfLoudness) + 10
-
-        print(dictOfDetails)
-
-        # extract URI
-        listOfURI = []
-        for track in newTracks:
-            listOfURI.append(track['track']['uri'])
-
-        return newTracks, listOfURI, listOfBPM, dictOfDetails
     
-    else:
-        return {}
+    newTracks, listOfURI, dictOfDetails = generateDetails(
+        PLItems=PLItems,
+        details=['id', 'tempo', 'danceability', 'energy', 'loudness'],
+        averageIgnore=['id', 'tempo'],
+        header=header
+    )
+    listOfBPM = dictOfDetails['tempo']
+    
+    return newTracks, listOfURI, listOfBPM, dictOfDetails
+    
+
+def createDictOfDetails(audio_features=list, params=dict, averageIgnore=[], average=False):
+    '''
+    Given a List of dictionaries returned by Spotify, this collects and creates a dictionary of lists 
+    where the key is given by a list of params and the list of values is generated
+    
+    :param audio_features: List of Tracks to filter through
+    :type audio_features: dict
+    :param params: List of attributes to filter for
+    :type params: dict
+    :param average: Averages all Details
+    :type average: bool
+    :param averageIgnore: Creates average but ignores values in list
+    :type averageIgnore: list default []
+
+    ---
+    :Example:
+    >>> createDictOfDetails(audio_features= audioFeatures, params=params, averageIgnore=['id'])
+    >>> {'acousticness': 0.00242, 'id': ['2takcwOaAZWiXQijPHIx7B', '2takeOnMeade4WR'], 'energy': 0.842}
+    '''
+    collectiveDict = {}
+    
+    for attribute in params:
+            # Iterate through the list of parameters
+            collectiveDict[attribute] = []
+    for track in audio_features:
+        # per each track
+        for attribute in params:
+            # Iterate through the list of parameters
+            collectiveDict[attribute] += [track[attribute]]
+    
+    if average or averageIgnore:
+        for attribute in collectiveDict:
+            if attribute not in averageIgnore:
+                values = collectiveDict[attribute]
+                collectiveDict[attribute] = sum(values)/len(values)
+
+    return collectiveDict
+
+def addTracks(playlistID=str, listOfTrackURIs=list, header=dict):
+    tryPostSpotifyRequest(
+        API_URL + "playlists/" + playlistID + "/tracks",
+        headers=header, 
+        debug=True,
+        json = {
+                "uris" : listOfTrackURIs
+            }
+        )
 
 def createBPM(listOfURIs=str, name=str, header=dict):
     if not session['id']:
         redirect(url_for("routes_file.getProfile", external=True))
     id = session['id']
-    URIs = listOfURIs
-    print(URIs, "/n/n")
+
     PLname = "BPM playlist " + name
     response = tryPostSpotifyRequest(
         API_URL + "users/" + id + "/playlists",
@@ -327,14 +440,17 @@ def createBPM(listOfURIs=str, name=str, header=dict):
     print(response.keys())
     playlistID = response['id']
     time.sleep(1)
-    addSongs = tryPostSpotifyRequest(
-        API_URL + "playlists/" + playlistID + "/tracks",
-        headers=header, 
-        debug=True,
-        json={
-            "uris" : URIs
-        }
-        )
-    print(str(addSongs), '/n/n')
+    
+    PLItemsLength = len(listOfURIs)
+    offset = 0
+
+    while PLItemsLength > 0:
+        # set current playlist items to handle
+        response = addTracks(
+            playlistID, 
+            listOfURIs[offset : offset + min(100, PLItemsLength)], 
+            header=header)
+        # onto the next 100
+        PLItemsLength -= min(100, PLItemsLength)
 
 
