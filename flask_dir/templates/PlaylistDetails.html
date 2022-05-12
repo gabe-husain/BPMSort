@@ -3,7 +3,7 @@
 {% block content %}
     <h1>{% block title %} User Playlists {% endblock %}</h1>
     <h1>Hello {{session['display_name']}}</h1>
-    <h2>Here you can find {{playlistData['name']}}'s tracklist</h2>
+    <h2>Here you can find {{playlistData['name']}}'s tracklist, {{ playlistData['tracks']['items']|length }} songs</h2>
     <section>
         <form method="POST" action="">
             <input type="submit" id="BPM" name="BPM" value="Generate BPM Playlist">
@@ -11,9 +11,11 @@
         </form>
         {% if generatedPL|length > 0 %}
             {% for key in dictOfDetails: %}
+            {% if key != 'id' %}
                 <div>
                     <span>{{ key }}: </span> <span>{{ dictOfDetails[key] }} </span>
                 </div>
+            {% endif %}
                 
             {% endfor %}
             {% if generatedPL|length > 0 %}

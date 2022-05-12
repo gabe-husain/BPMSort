@@ -60,8 +60,8 @@ def getProfile():
 #       Routes
 #
 
-@routes_file.route('/UserPlaylists', methods = ['POST', 'GET'])
 @routes_file.route('/UserPlaylists')
+@routes_file.route('/UserPlaylists', methods = ['POST', 'GET'])
 def getPlaylists():
     refresh = request.args.get("refresh", default=False, type=bool)
     onlyUserCreated = request.args.get("omp", default=False, type=bool)
