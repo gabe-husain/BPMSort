@@ -10,12 +10,6 @@ import time
 
 API_URL = 'https://api.spotify.com/v1/'
 
-#GET request format: r = requests.get(API_URL + 'api request', header=header)
-#r = requests.get(API_URL + 'me/playlists/', headers=headers)
-#response = json.loads(r.text)
-#USER_ID = response["items"]
-#print(response["href"])
-
 def tryGetSpotifyRequest(uri, retryTime=0, debug=False, **args):
     '''
     Takes in a uri and args, wraps the request for python requests module. 
@@ -296,6 +290,22 @@ def getAudioFeatures(listOfTrackIDs=list, header=dict):
     
     return response
     
+def getPlaybackState(header=dict, debug=False):
+    '''
+    Makes a request to the me/player endpoint of Spotify to retrieve user playback state
+    :param header: headers to be used for the request
+    :type header: dict
+    :return: User Profile elements
+    :rtype: dict
+    ---
+    :return example: TODO: complete this
+    ''' 
+    response = tryGetSpotifyRequest(
+        API_URL + 'me/player/currently-playing',
+        headers=header,
+        debug=debug
+        )
+    return response
 
 def generateDetails(
     PLItems=list, 
@@ -335,9 +345,10 @@ def generateDetails(
 
     # sort audio features
     audio_features = sorted(fullResponse['audio_features'], key=itemgetter(sortBy))
+        # and creates the dict of details for all of those sorted songs by what should be sorted
     dictOfDetails = createDictOfDetails(audio_features, details, averageIgnore=averageIgnore)
 
-
+    # Creates new list that simply has the ids of each songs
     listOfTrackIDs = dictOfDetails['id']
 
     # sort playlist items for representation
@@ -359,6 +370,8 @@ def generateDetails(
 def generateBPM(playlistData=dict, header=dict):
     '''
     Creates BPM playlist and returns stuff
+    generates ordered list
+
     '''
     if playlistData['tracks']['items']:
         PLItems = playlistData['tracks']['items']
@@ -414,6 +427,11 @@ def createDictOfDetails(audio_features=list, params=dict, averageIgnore=[], aver
     return collectiveDict
 
 def addTracks(playlistID=str, listOfTrackURIs=list, header=dict):
+    '''
+    Adds tracks to a playlist
+    Performs an apiRequests
+
+    '''
     tryPostSpotifyRequest(
         API_URL + "playlists/" + playlistID + "/tracks",
         headers=header, 
@@ -424,17 +442,26 @@ def addTracks(playlistID=str, listOfTrackURIs=list, header=dict):
         )
 
 def createBPM(listOfURIs=str, name=str, header=dict):
+    '''
+    Creates BPM playlist
+    Performs an apiRequests
+
+    '''
+    # does the session check
     if not session['id']:
         redirect(url_for("routes_file.getProfile", external=True))
     id = session['id']
 
     PLname = "BPM playlist " + name
+
+    #creates a BPM playlist for the user
     response = tryPostSpotifyRequest(
         API_URL + "users/" + id + "/playlists",
         headers=header, 
         debug=True,
         json = {
-            "name" : PLname
+            "name" : PLname,
+            "public": False
             }
         )
     print(response.keys())
