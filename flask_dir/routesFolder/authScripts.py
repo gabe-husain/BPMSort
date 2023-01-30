@@ -1,5 +1,6 @@
 from collections import namedtuple
 from tokenize import String
+from flask import Flask, Blueprint
 import requests
 import os
 import sys
@@ -8,13 +9,10 @@ import json
 
 sys.path.append("../")
 
-from dotenv import load_dotenv
-
-load_dotenv(dotenv_path="../.env")
-
 CLIENT = os.getenv('CLIENT_ID')
 SECRET = os.getenv('CLIENT_SECRET')
 CURRENT_URL = os.getenv('CURRENT_URL')
+oauth = Blueprint("oauth", __name__)
 
 # Endpoints
 AUTH_URL = 'https://accounts.spotify.com/authorize'
@@ -24,7 +22,7 @@ URI = CURRENT_URL
 callback_uri = URI + "callback"
 
 #init values
-scope = 'user-read-email user-top-read playlist-read-private playlist-modify-private playlist-modify-public'
+scope = 'user-read-email user-top-read playlist-read-private playlist-modify-private playlist-modify-public user-read-currently-playing'
 
 AT_response = namedtuple("AT_response",
     "ACCESS_TOKEN TIME_LIMIT TOKENS HEADERS")
@@ -41,7 +39,8 @@ def run_Auth():
         + '&redirect_uri='
         + quote(callback_uri)
         + '&scope='
-        + quote(scope))
+        + quote(scope)
+        + '&state=3256723')
     return full_url
 
 def second_Auth(code=str, secret=str):
@@ -70,16 +69,10 @@ def second_Auth(code=str, secret=str):
     #Request Access token
     print("Made POST request")
     access_token_response = requests.post(TOKEN_URL, data=data, verify=False, allow_redirects=False, auth=(CLIENT, SECRET))
-    #print(access_token_response.headers)
     print(access_token_response.text)
 
     return decodeResponse(access_token_response, True)
 
-    #GET request format: r = requests.get(API_URL + 'api request', header=header)
-    #r = requests.get(API_URL + 'me/playlists/', headers=headers)
-    #response = json.loads(r.text)
-    #USER_ID = response["items"]
-    #print(response["href"])
 
 def decodeResponse(access_token_response=str, ref_token = False):
     '''
@@ -140,9 +133,3 @@ def getNewToken(refreshToken=str):
     print("Made POST request")
     access_token_response = requests.post(TOKEN_URL, data=data, auth=(CLIENT, SECRET))
     return decodeResponse(access_token_response)
-
-
-
-
-#Get most listened to music
-

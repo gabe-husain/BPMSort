@@ -1,0 +1,53 @@
+.marqueeContainer {
+    position: static;
+    white-space: nowrap;
+    overflow: hidden;
+    z-index: -10;
+}
+
+.marquee {
+    padding: none;
+    z-index: -1;
+    position: fixed;
+    white-space: nowrap;
+    overflow: hidden;
+    font-family: Helvetica;
+    font-size: 6vw;
+    animation-duration: 30s;
+}
+.marqueeleft {
+    animation-name: marqueeleft2; 
+    animation-timing-function: linear; 
+    animation-iteration-count: infinite;
+}
+
+.marqueeleft1 {
+animation-name: marqueeleft1;
+}
+
+.marqueeright {
+animation-name: marqueeright2;
+animation-timing-function: linear; 
+animation-iteration-count: infinite;
+}
+.marqueeright1 {
+animation-name: marqueeright1;
+}
+
+@keyframes marqueeleft1 {
+0% {transform: translateX(0%);}
+100% {transform: translateX(-100%);}
+}
+@keyframes marqueeleft2 {
+0% {transform: translateX(100%);}
+100% {transform: translateX(0%);}
+}
+
+@keyframes marqueeright1 {
+0% {transform: translateX(0%);}
+100% {transform: translateX(100%);}
+}
+@keyframes marqueeright2 {
+0% {transform: translateX(-100%);}
+100% {transform: translateX(0%);}
+}
