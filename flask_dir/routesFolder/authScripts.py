@@ -14,12 +14,13 @@ load_dotenv(dotenv_path="../.env")
 
 CLIENT = os.getenv('CLIENT_ID')
 SECRET = os.getenv('CLIENT_SECRET')
+CURRENT_URL = os.getenv('CURRENT_URL')
 
 # Endpoints
 AUTH_URL = 'https://accounts.spotify.com/authorize'
 TOKEN_URL = 'https://accounts.spotify.com/api/token'
 API_URL = 'https://api.spotify.com/v1/'
-URI = 'http://gawesome13.pythonanywhere.com/'
+URI = CURRENT_URL
 callback_uri = URI + "callback"
 
 #init values
