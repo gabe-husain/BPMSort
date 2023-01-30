@@ -19,13 +19,13 @@ SECRET = os.getenv('CLIENT_SECRET')
 AUTH_URL = 'https://accounts.spotify.com/authorize'
 TOKEN_URL = 'https://accounts.spotify.com/api/token'
 API_URL = 'https://api.spotify.com/v1/'
-URI = 'http://localhost:5000/'
+URI = 'http://gawesome13.pythonanywhere.com/'
 callback_uri = URI + "callback"
 
 #init values
 scope = 'user-read-email user-top-read playlist-read-private playlist-modify-private playlist-modify-public'
 
-AT_response = namedtuple("AT_response", 
+AT_response = namedtuple("AT_response",
     "ACCESS_TOKEN TIME_LIMIT TOKENS HEADERS")
 
 def run_Auth():
@@ -34,21 +34,21 @@ def run_Auth():
 
     :return: Url complete with auth endpoint, the client, callback URI and scope
     '''
-    full_url = (AUTH_URL 
-        + '?response_type=code&client_id=' 
-        + quote(CLIENT) 
-        + '&redirect_uri=' 
-        + quote(callback_uri) 
-        + '&scope=' 
+    full_url = (AUTH_URL
+        + '?response_type=code&client_id='
+        + quote(CLIENT)
+        + '&redirect_uri='
+        + quote(callback_uri)
+        + '&scope='
         + quote(scope))
     return full_url
 
 def second_Auth(code=str, secret=str):
     '''
-    Takes in an Auth Code and sends a post request to 
-    Spotify to request a token, time limit, 
+    Takes in an Auth Code and sends a post request to
+    Spotify to request a token, time limit,
     tokens dict, headers dict, and refresh token
-    
+
     :param code: Auth code from the login verification/callback
     :type code: String
     :param secret: Client Secret
@@ -58,12 +58,12 @@ def second_Auth(code=str, secret=str):
     :rtype ACCESS_TOKEN: String
     :return TIME_LIMIT: Seconds limit until the token expires
     :rtype TIME_LIMIT: int
-    :return tokens: Used to capture refreshToken 
+    :return tokens: Used to capture refreshToken
     :rtype tokens: dict
     :return headers: Headers to make requests
     :rtype headers: dict
     '''
-    
+
     data = {'grant_type': 'authorization_code', 'code': code, 'redirect_uri': callback_uri, 'state' : secret}
 
     #Request Access token
@@ -73,7 +73,7 @@ def second_Auth(code=str, secret=str):
     print(access_token_response.text)
 
     return decodeResponse(access_token_response, True)
-    
+
     #GET request format: r = requests.get(API_URL + 'api request', header=header)
     #r = requests.get(API_URL + 'me/playlists/', headers=headers)
     #response = json.loads(r.text)
@@ -83,15 +83,15 @@ def second_Auth(code=str, secret=str):
 def decodeResponse(access_token_response=str, ref_token = False):
     '''
     Takes in Access token response in json, decodes it and spits it out, this is the version with a refresh token
-    
-    :param access_token_response: 
-    :type access_token_response: 
+
+    :param access_token_response:
+    :type access_token_response:
 
     :return ACCESS_TOKEN: Token to use for requesting data
     :rtype ACCESS_TOKEN: String
     :return TIME_LIMIT: Seconds limit until the token expires
     :rtype TIME_LIMIT: int
-    :return tokens: Used to capture refreshToken 
+    :return tokens: Used to capture refreshToken
     :rtype tokens: dict
     :return headers: Headers to make requests
     :rtype headers: dict
@@ -112,14 +112,14 @@ def decodeResponse(access_token_response=str, ref_token = False):
         return AT_response(ACCESS_TOKEN, TIME_LIMIT, tokens, headers), REFRESH_TOKEN
     else:
         return AT_response(ACCESS_TOKEN, TIME_LIMIT, tokens, headers)
-    
+
 
 def getNewToken(refreshToken=str):
     '''
     Takes in a refresh token and spits out a new access token
 
     :param refreshToken: Refresh token provided by decoded response
-    :type access_token_response: 
+    :type access_token_response:
 
     :return ACCESS_TOKEN: Token to use for requesting data
     :rtype ACCESS_TOKEN: String
