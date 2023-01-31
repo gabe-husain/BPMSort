@@ -10,6 +10,7 @@ husaingabrielnlptest-e05838927acb.json
 *.log
 *.pot
 *.pyc
+*/*/*/*/__pycache__/
 */*/*/__pycache__/
 */*/__pycache__/
 */__pycache__/
