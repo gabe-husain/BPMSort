@@ -2,9 +2,9 @@ from flask import Flask, Blueprint, session
 from routesFolder.routes import routes_file
 import os
 
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
 
-load_dotenv(".env")
+load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object("configFile.DevelopmentConfig")
