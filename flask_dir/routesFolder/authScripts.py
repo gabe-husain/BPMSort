@@ -4,8 +4,11 @@ from flask import Flask, Blueprint
 import requests
 import os
 import sys
+from dotenv import load_dotenv
 from urllib.parse import quote, urlsplit, parse_qs
 import json
+
+load_dotenv("../.env")
 
 CLIENT = os.getenv('CLIENT_ID')
 SECRET = os.getenv('CLIENT_SECRET')
