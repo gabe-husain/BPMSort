@@ -2,7 +2,7 @@
 *.cpython-39.pyc
 *.cpython-310.pyc
 husaingabrielnlptest-e05838927acb.json
-venv
+*/venv/*
 *.pyc
 *.fcgi
 *.htaccess
