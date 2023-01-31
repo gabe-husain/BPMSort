@@ -7,8 +7,6 @@ import sys
 from urllib.parse import quote, urlsplit, parse_qs
 import json
 
-sys.path.append("../")
-
 CLIENT = os.getenv('CLIENT_ID')
 SECRET = os.getenv('CLIENT_SECRET')
 CURRENT_URL = os.getenv('CURRENT_URL')

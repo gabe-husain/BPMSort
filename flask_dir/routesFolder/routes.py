@@ -6,9 +6,6 @@ import urllib.request
 import sys
 import os
 from routesFolder.oauth2 import run_Auth, second_Auth, getToken
-
-sys.path.append("../")
-
 from apiRequests import getUserPlaylists, getUserProfile, getPlaylistDetails, generateBPM, createBPM
 
 secret_key = os.getenv('SECRET')
