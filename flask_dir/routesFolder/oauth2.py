@@ -36,7 +36,7 @@ def retrieveCode():
     
     print("req_token: ", session['req_token'])
     
-    return redirect(url_for('routes_file.oauth.getProfile'))
+    return redirect(url_for('oauth.getProfile'))
 
 @oauth.route('/getProfile')
 def getProfile():

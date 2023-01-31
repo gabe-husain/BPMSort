@@ -1,5 +1,4 @@
 from flask import Flask, Blueprint, redirect, request_finished, session, request, url_for, render_template
-from routesFolder.oauth2 import oauth
 from apiRequests import getPlaybackState
 from PIL import Image
 import urllib.request
@@ -10,7 +9,6 @@ from apiRequests import getUserPlaylists, getUserProfile, getPlaylistDetails, ge
 
 secret_key = os.getenv('SECRET')
 routes_file = Blueprint("routes_file", __name__)
-routes_file.register_blueprint(oauth)
 req_token, token_refresh, time_limit, expires_at, headers = "","","", 0, {}
 
 @routes_file.route('/')
@@ -35,7 +33,7 @@ def getPlaylists():
         token_info = getToken()
     except:
         print("no token", session['req_token'])
-        return redirect(url_for('routes_file.oauth.login', external=True))
+        return redirect(url_for('oauth.login', external=True))
 
     # wait for REDIS implementation
 
