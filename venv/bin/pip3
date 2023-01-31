@@ -1,4 +1,4 @@
-#!/Users/ghusain/Documents/berkeley/Projects/spotifystocks/cd/bin/python3.9
+#!/Users/ghusain/Documents/berkeley/Projects/spotifystocks/BPMSort/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
