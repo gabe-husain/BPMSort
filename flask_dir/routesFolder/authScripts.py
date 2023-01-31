@@ -12,6 +12,8 @@ SECRET = os.getenv('CLIENT_SECRET')
 CURRENT_URL = os.getenv('CURRENT_URL')
 oauth = Blueprint("oauth", __name__)
 
+print(CURRENT_URL)
+
 # Endpoints
 AUTH_URL = 'https://accounts.spotify.com/authorize'
 TOKEN_URL = 'https://accounts.spotify.com/api/token'
