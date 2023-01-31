@@ -4,7 +4,7 @@ from urllib.request import HTTPDefaultErrorHandler
 from spotifystocks.BPMSort.apiRequests import getAudioFeatures
 
 sys.path.append("../")
-from apiRequests import createDictOfDetails
+from flask_dir.apiRequests import createDictOfDetails
 
 audioFeatures = [{
   "acousticness": 0.00242,
