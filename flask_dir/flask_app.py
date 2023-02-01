@@ -12,3 +12,6 @@ app.config.from_object("configFile.DevelopmentConfig")
 app.config["SESSION_COOKIE_NAME"] = 'Spotify Sesh'
 app.register_blueprint(routes_file)
 app.register_blueprint(oauth)
+
+if __name__ == '__main__':
+    app.run()
