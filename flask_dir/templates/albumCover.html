@@ -6,8 +6,49 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='marquee.css') }}">
 
 <body style="background-color:rgb({{ red }},{{ blue }},{{ green }}); color: {{textColor}};">
-    {% include 'navbar.html' %}
+
 <script src="/static/Marquee.js"></script>
+<script>
+    // Function to create and append the navbar
+    function createNavbar() {
+      const navbar = document.createElement('nav');
+      navbar.id = 'navbar';
+      navbar.className = 'fixed w-full spotify-black text-white p-4 transition-transform duration-300 ease-in-out z-50';
+      navbar.style.transform = 'translateY(-100%)'; // Start hidden
+      navbar.innerHTML = `
+        <div class="container mx-auto flex justify-between items-center">
+          <a href="/" class="text-2xl font-bold">Spotify API</a>
+          <ul class="flex space-x-4">
+            <li><a href="/playlists" class="hover:text-green-400">Playlists</a></li>
+            <li><a href="/player" class="hover:text-green-400">Player</a></li>
+            <li><a href="/logout" class="hover:text-red-400">Log Out</a></li>
+          </ul>
+        </div>
+      `;
+      document.body.insertBefore(navbar, document.body.firstChild);
+    }
+  
+    // Create and append the navbar
+    createNavbar();
+  
+    // Navbar visibility control
+    let lastScrollTop = 0;
+    const navbar = document.getElementById('navbar');
+  
+    window.addEventListener('scroll', function() {
+      let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      
+      if (scrollTop < lastScrollTop) {
+        // Scrolling up
+        navbar.style.transform = 'translateY(0)';
+      } else {
+        // Scrolling down
+        navbar.style.transform = 'translateY(-100%)';
+      }
+      
+      lastScrollTop = scrollTop;
+    });
+  </script>
 </body>
     <style>
         .marquee {
@@ -33,6 +74,22 @@
         }
         #Album-Cover {
             height: 100vh;
+        }
+        .spotify-black {
+            background-color: #191414;
+        }
+
+        #navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        /* Add some top padding to the body to prevent content from being hidden under the navbar */
+        body {
+            padding-top: 60px;
         }
     </style>
     <div class="marqueeContainer Title">
