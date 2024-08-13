@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='marquee.css') }}">
 
 <body style="background-color:rgb({{ red }},{{ blue }},{{ green }}); color: {{textColor}};">
+    {% include 'navbar.html' %}
 <script src="/static/Marquee.js"></script>
 </body>
     <style>
