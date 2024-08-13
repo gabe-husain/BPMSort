@@ -15,22 +15,9 @@
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
-    <header class="spotify-black text-white p-4">
-        <nav class="container mx-auto flex justify-between items-center">
-            <a href="{{ url_for('routes_file.index') }}" class="text-2xl font-bold">Spotify API</a>
-            <ul class="flex space-x-4">
-                {% if session['display_name'] %}
-                    <li><a href="{{ url_for('routes_file.getPlaylists') }}" class="hover:text-green-400">Playlists</a></li>
-                    <li><a href="{{ url_for('routes_file.player') }}" class="hover:text-green-400">Player</a></li>
-                    <li><a href="{{ url_for('oauth.logout') }}" class="hover:text-red-400">Log Out</a></li>
-                {% else %}
-                    <li><a href="{{ url_for('oauth.login') }}" class="spotify-green text-white px-4 py-2 rounded hover:bg-green-600">Log In</a></li>
-                {% endif %}
-            </ul>
-        </nav>
-    </header>
+    {% include 'navbar.html' %}
 
-    <main class="container mx-auto flex-grow p-4">
+    <main class="container mx-auto flex-grow p-4 mt-16">
         {% if session['display_name'] %}
             <div class="bg-white rounded-lg shadow-md p-4 mb-4">
                 <p class="text-lg">Welcome, <span class="font-semibold">{{ session['display_name'] }}</span>!</p>
@@ -48,5 +35,25 @@
             <p>&copy; 2024 Spotify API Project. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        let lastScrollTop = 0;
+        const navbar = document.getElementById('navbar');
+        const navbarHeight = navbar.offsetHeight;
+
+        window.addEventListener('scroll', function() {
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (scrollTop > lastScrollTop && scrollTop > navbarHeight) {
+                // Scrolling down
+                navbar.style.transform = 'translateY(-100%)';
+            } else {
+                // Scrolling up
+                navbar.style.transform = 'translateY(0)';
+            }
+            
+            lastScrollTop = scrollTop;
+        });
+    </script>
 </body>
 </html>
