@@ -5,8 +5,8 @@ from PIL import Image
 import urllib.request
 import colorsys
 from typing import Tuple
-from .oauth2 import get_token, oauth
-from ..main import (
+from routesFolder.oauth2 import get_token, oauth
+from flask_dir.main import (
     get_user_playlists, get_user_profile, get_playlist_details,
     generate_bpm, create_bpm_playlist, spotify_request
 )

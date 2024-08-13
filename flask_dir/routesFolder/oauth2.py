@@ -2,9 +2,11 @@
 
 from flask import Blueprint, session, request, redirect, url_for
 import time
-from .auth_scripts import run_auth, second_auth, get_new_token
-from ..main import get_user_profile
+from routesFolder.auth_scripts import run_auth, second_auth, get_new_token
+from flask_dir.main import get_user_profile
 import os
+
+oauth = Blueprint("oauth", __name__)
 
 oauth = Blueprint("oauth", __name__)
 
