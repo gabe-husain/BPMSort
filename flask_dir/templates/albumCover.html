@@ -1,37 +1,76 @@
 {% extends "base.html" %}
-
 {% block title %}Album Cover{% endblock %}
-
+{% block header %}
+<body style="background-color:rgb({{ red }},{{ blue }},{{ green }}); color: {{textColor}};">
+<link rel="stylesheet" href="/static/marquee.css" />
+<script src="/static/Marquee.js"></script>
+</body>
+{% endblock %}
 {% block content %}
-    <div class="marqueeContainer Title">
-        <span id="keyText1" hidden>{{ title }} •</span>
-        <div class="marquee marqueeright marqueeright1 replaced1">No Title</div>
-        <div class="marquee marqueeright marqueeright2 replaced1">No Title</div>
-    </div>
-
-    <div class="marqueeContainer Artist">
-        <span id="keyText2" hidden>{{ artist }} •</span>
-        <div class="marquee marqueeleft marqueeleft1 replaced2">No Artist</div>
-        <div class="marquee marqueeleft marqueeleft2 replaced2">No Artist</div>
-    </div>
-
-    <div id="fill"></div>
-    <div id="spacing"></div>
-
-    <div id="Album-Cover">
-        <img src="{{ image }}" alt="Album Cover" class="center">
-    </div>
-
     <style>
-        body {
-            background-color: rgb({{ red }}, {{ green }}, {{ blue }});
-            color: {{ text_color }};
+        .marquee {
+            color: {{subtitleColor}};
         }
-        .subtitle {
-            color: {{ subtitle_color }};
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        html {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        body {
+            height: 100vh;
+            overflow-y: scroll;
+        }
+        #spacing {
+            height: 100%;
+            padding-top: 50vh;
+            box-sizing: border-box;
+        }
+        #Album-Cover {
+            height: 100vh;
         }
     </style>
-
-    <script src="{{ url_for('static', filename='Marquee.js') }}"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='marquee.css') }}">
+    <div class="marqueeContainer Title">
+    <span id="keyText1" hidden> {{ title }} •</span>
+    <div class="marquee marqueeright marqueeright1 replaced1 "> No Title </div>
+    <div class="marquee marqueeright marqueeright2 replaced1 "> No Title </div>
+  </div>
+  <div class="marqueeContainer Artist">
+    <span id="keyText2" hidden> {{ artist }} •</span>
+    <div class="marquee marqueeleft marqueeleft1 replaced2 "> No Artist </div>
+    <div class="marquee marqueeleft marqueeleft2 replaced2 "> No Artist </div>
+  </div>
+  <div id="fill"></div>
+  <script>
+    resizeTitle();
+    resizeArtist();
+    setRepeat();
+    </script>
+    <div id="spacing"></div>
+    <div id="Album-Cover">
+        <script>
+            window.innerWidth
+        </script>
+        <style type="text/css">
+            .center
+            {
+            display: flex;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 20vh;
+            width:50%;
+            }
+        </style>
+        <div>
+            <img src="{{ image }}"  class="center">
+        </div>
+    </div>
+    <script>
+        setTimeout(function(){
+            window.location.reload();
+        }, {{ time }} );
+    </script>
 {% endblock %}
