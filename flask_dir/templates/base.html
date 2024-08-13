@@ -1,22 +1,52 @@
-<!doctype html>
-<title>{% block title %}{% endblock %} - Flaskr</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<nav>
-  <h1>Spotify API</h1>
-  <ul>
-    {% if session['display_name'] %}
-      <li><span>your name is {{ session['display_name'] }}</span>
-      <li><a href="{{ url_for('routes_file.getPlaylists') }}"><span>get playlists here</span></a>
-      <li><a href="{{ url_for('routes_file.player') }}">Player</a>
-      <li><a href="{{ url_for('oauth.logout') }}">Log Out</a>
-    {% else %}
-        <li><a href="{{ url_for('oauth.login') }}">Log In</a>
-    {% endif %}
-  </ul>
-</nav>
-<section class="content">
-  <header>
-    {% block header %}{% endblock %}
-  </header>
-  {% block content %}{% endblock %}
-</section>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - Spotify API</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .spotify-green {
+            background-color: #1DB954;
+        }
+        .spotify-black {
+            background-color: #191414;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <header class="spotify-black text-white p-4">
+        <nav class="container mx-auto flex justify-between items-center">
+            <a href="{{ url_for('routes_file.index') }}" class="text-2xl font-bold">Spotify API</a>
+            <ul class="flex space-x-4">
+                {% if session['display_name'] %}
+                    <li><a href="{{ url_for('routes_file.getPlaylists') }}" class="hover:text-green-400">Playlists</a></li>
+                    <li><a href="{{ url_for('routes_file.player') }}" class="hover:text-green-400">Player</a></li>
+                    <li><a href="{{ url_for('oauth.logout') }}" class="hover:text-red-400">Log Out</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('oauth.login') }}" class="spotify-green text-white px-4 py-2 rounded hover:bg-green-600">Log In</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container mx-auto flex-grow p-4">
+        {% if session['display_name'] %}
+            <div class="bg-white rounded-lg shadow-md p-4 mb-4">
+                <p class="text-lg">Welcome, <span class="font-semibold">{{ session['display_name'] }}</span>!</p>
+            </div>
+        {% endif %}
+
+        <section class="bg-white rounded-lg shadow-md p-4">
+            {% block header %}{% endblock %}
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+    <footer class="spotify-black text-white p-4 mt-8">
+        <div class="container mx-auto text-center">
+            <p>&copy; 2024 Spotify API Project. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
