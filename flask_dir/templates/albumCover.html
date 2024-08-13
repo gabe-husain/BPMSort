@@ -1,12 +1,13 @@
-{% extends "base.html" %}
-{% block title %}Album Cover{% endblock %}
-{% block header %}
+<!DOCTYPE html>
+<html lang="en">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Album Cover</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='marquee.css') }}">
+
 <body style="background-color:rgb({{ red }},{{ blue }},{{ green }}); color: {{textColor}};">
-<link rel="stylesheet" href="/static/marquee.css" />
 <script src="/static/Marquee.js"></script>
 </body>
-{% endblock %}
-{% block content %}
     <style>
         .marquee {
             color: {{subtitleColor}};
@@ -73,4 +74,4 @@
             window.location.reload();
         }, {{ time }} );
     </script>
-{% endblock %}
+</html>
