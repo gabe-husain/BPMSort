@@ -1,0 +1,29 @@
+.
+├── LICENSE
+├── README.md
+├── flask_dir
+│   ├── apiRequests.py
+│   ├── configFile.py
+│   ├── flask_app.py
+│   ├── main.py
+│   ├── nowPlaying.jpeg
+│   ├── routesFolder
+│   │   ├── authScripts.py
+│   │   ├── oauth2.py
+│   │   ├── routeScripts.py
+│   │   └── routes.py
+│   ├── static
+│   │   ├── Marquee.js
+│   │   └── marquee.css
+│   └── templates
+│       ├── PlaylistDetails.html
+│       ├── UserPlaylists.html
+│       ├── albumCover.html
+│       └── base.html
+├── requirements.txt
+├── tests
+│   ├── apiRequestTests.py
+│   └── nlpTest.py
+└── tree.txt
+
+6 directories, 21 files
