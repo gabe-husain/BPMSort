@@ -201,7 +201,7 @@ def generate_bpm(playlist_data: Dict[str, Any], header: Dict[str, str]) -> Tuple
         playlist_items,
         sort_by='tempo',
         details=['id', 'tempo', 'danceability', 'energy', 'loudness'],
-        average_ignore=['id', 'tempo'],
+        average_ignore=['id', 'tempo']
     )
     
     return sorted_tracks, track_uris, details_dict['tempo'], details_dict
@@ -250,8 +250,6 @@ def create_bpm_playlist(track_uris: List[str], name: str, header: Dict[str, str]
         return playlist_id
     except SpotifyAPIError as e:
         raise SpotifyAPIError(f"Failed to create BPM playlist: {e}")
-
-# Additional helper functions can be added here as needed
 
 if __name__ == "__main__":
     print("This module contains helper functions for Spotify API interactions.")

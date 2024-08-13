@@ -1,21 +1,18 @@
+# auth_scripts.py
+
 from collections import namedtuple
-from tokenize import String
-from flask import Flask, Blueprint
+from flask import Blueprint
 import requests
 import os
-import sys
 from dotenv import load_dotenv
-from urllib.parse import quote, urlsplit, parse_qs
+from urllib.parse import quote
 import json
 
-load_dotenv("../.env")
+load_dotenv()
 
 CLIENT = os.getenv('CLIENT_ID')
 SECRET = os.getenv('CLIENT_SECRET')
 CURRENT_URL = os.getenv('CURRENT_URL')
-oauth = Blueprint("oauth", __name__)
-
-print(CURRENT_URL)
 
 # Endpoints
 AUTH_URL = 'https://accounts.spotify.com/authorize'
@@ -24,115 +21,85 @@ API_URL = 'https://api.spotify.com/v1/'
 URI = CURRENT_URL
 callback_uri = URI + "callback"
 
-#init values
+# Init values
 scope = 'user-read-email user-top-read playlist-read-private playlist-modify-private playlist-modify-public user-read-currently-playing'
 
-AT_response = namedtuple("AT_response",
-    "ACCESS_TOKEN TIME_LIMIT TOKENS HEADERS")
+AT_response = namedtuple("AT_response", "ACCESS_TOKEN TIME_LIMIT TOKENS HEADERS")
 
-def run_Auth():
-    '''
-    Runs the AUTH script
+def run_auth():
+    """
+    Construct the Spotify authorization URL.
 
-    :return: Url complete with auth endpoint, the client, callback URI and scope
-    '''
-    full_url = (AUTH_URL
-        + '?response_type=code&client_id='
-        + quote(CLIENT)
-        + '&redirect_uri='
-        + quote(callback_uri)
-        + '&scope='
-        + quote(scope)
-        + '&state=3256723')
+    Returns:
+        str: The complete authorization URL.
+    """
+    full_url = (f"{AUTH_URL}"
+                f"?response_type=code"
+                f"&client_id={quote(CLIENT)}"
+                f"&redirect_uri={quote(callback_uri)}"
+                f"&scope={quote(scope)}"
+                f"&state=3256723")
     return full_url
 
-def second_Auth(code=str, secret=str):
-    '''
-    Takes in an Auth Code and sends a post request to
-    Spotify to request a token, time limit,
-    tokens dict, headers dict, and refresh token
+def second_auth(code: str, secret: str):
+    """
+    Exchange the authorization code for an access token.
 
-    :param code: Auth code from the login verification/callback
-    :type code: String
-    :param secret: Client Secret
-    :type secret: String
+    Args:
+        code (str): The authorization code received from Spotify.
+        secret (str): The client secret.
 
-    :return ACCESS_TOKEN: Token to use for requesting data
-    :rtype ACCESS_TOKEN: String
-    :return TIME_LIMIT: Seconds limit until the token expires
-    :rtype TIME_LIMIT: int
-    :return tokens: Used to capture refreshToken
-    :rtype tokens: dict
-    :return headers: Headers to make requests
-    :rtype headers: dict
-    '''
-
-    data = {'grant_type': 'authorization_code', 'code': code, 'redirect_uri': callback_uri, 'state' : secret}
-
-    #Request Access token
-    print("Made POST request")
-    access_token_response = requests.post(TOKEN_URL, data=data, verify=False, allow_redirects=False, auth=(CLIENT, SECRET))
-    print(access_token_response.text)
-
-    return decodeResponse(access_token_response, True)
-
-
-def decodeResponse(access_token_response=str, ref_token = False):
-    '''
-    Takes in Access token response in json, decodes it and spits it out, this is the version with a refresh token
-
-    :param access_token_response:
-    :type access_token_response:
-
-    :return ACCESS_TOKEN: Token to use for requesting data
-    :rtype ACCESS_TOKEN: String
-    :return TIME_LIMIT: Seconds limit until the token expires
-    :rtype TIME_LIMIT: int
-    :return tokens: Used to capture refreshToken
-    :rtype tokens: dict
-    :return headers: Headers to make requests
-    :rtype headers: dict
-
-    '''
-    tokens = json.loads(access_token_response.text)
-    print(tokens)
-    ACCESS_TOKEN = tokens['access_token']
-    TIME_LIMIT = tokens["expires_in"]
-    headers = {
-        'Authorization': 'Bearer ' + ACCESS_TOKEN
+    Returns:
+        Tuple[AT_response, str]: A tuple containing the access token response and refresh token.
+    """
+    data = {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': callback_uri,
+        'state': secret
     }
 
-    # return based on what's needed, if refresh, then no need for refresh token
+    access_token_response = requests.post(TOKEN_URL, data=data, auth=(CLIENT, SECRET))
+    return decode_response(access_token_response, True)
+
+def decode_response(access_token_response, ref_token=False):
+    """
+    Decode the access token response from Spotify.
+
+    Args:
+        access_token_response (requests.Response): The response from the token endpoint.
+        ref_token (bool): Whether to include the refresh token in the response.
+
+    Returns:
+        Union[Tuple[AT_response, str], AT_response]: The decoded token information.
+    """
+    tokens = json.loads(access_token_response.text)
+    access_token = tokens['access_token']
+    time_limit = tokens["expires_in"]
+    headers = {
+        'Authorization': f'Bearer {access_token}'
+    }
 
     if ref_token:
-        REFRESH_TOKEN = tokens['refresh_token']
-        return AT_response(ACCESS_TOKEN, TIME_LIMIT, tokens, headers), REFRESH_TOKEN
+        refresh_token = tokens['refresh_token']
+        return AT_response(access_token, time_limit, tokens, headers), refresh_token
     else:
-        return AT_response(ACCESS_TOKEN, TIME_LIMIT, tokens, headers)
+        return AT_response(access_token, time_limit, tokens, headers)
 
+def get_new_token(refresh_token: str):
+    """
+    Get a new access token using the refresh token.
 
-def getNewToken(refreshToken=str):
-    '''
-    Takes in a refresh token and spits out a new access token
+    Args:
+        refresh_token (str): The refresh token to use for getting a new access token.
 
-    :param refreshToken: Refresh token provided by decoded response
-    :type access_token_response:
-
-    :return ACCESS_TOKEN: Token to use for requesting data
-    :rtype ACCESS_TOKEN: String
-    :return TIME_LIMIT: Seconds limit until the token expires
-    :rtype TIME_LIMIT: int
-    :return tokens: Used to capture refreshToken
-    :rtype tokens: dict
-    :return headers: Headers to make requests
-    :rtype headers: dict
-    '''
-
+    Returns:
+        AT_response: The new access token information.
+    """
     data = {
         'grant_type': 'refresh_token',
-        'refresh_token': refreshToken
+        'refresh_token': refresh_token
     }
 
-    print("Made POST request")
     access_token_response = requests.post(TOKEN_URL, data=data, auth=(CLIENT, SECRET))
-    return decodeResponse(access_token_response)
+    return decode_response(access_token_response)
