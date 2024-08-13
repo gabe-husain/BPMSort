@@ -24,8 +24,3 @@ Next create a new .env file (in flask_dir directory) and set:
 ```FLASK_APP="flask_app.py"```
 
 Now you can run the program from flask_dir using ```flask run```
-
-Make sure to save the tree
-Tree is saved as 
-```tree -I 'venv|*.pyc|__pycache__' > tree.txt```
-after every change

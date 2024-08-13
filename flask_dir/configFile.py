@@ -1,24 +1,18 @@
-# configFile.py
-
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-class Config:
-    """Base configuration class."""
+class Config(object):
     DEBUG = False
     TESTING = False
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "default-secret-key"
+    SECRET_KEY ="aduhiIYGYFE868gYYgugyjg795GGguy"
+
 
 class ProductionConfig(Config):
-    """Production configuration."""
+    SECRET_KEY ="aduhiIYGYFE868gYYgugyjg795GGguy"
+
     pass
 
 class DevelopmentConfig(Config):
-    """Development configuration."""
+    SECRET_KEY ="aduhiIYGYFE868gYYgugyjg795GGguy"
     DEBUG = True
 
 class TestingConfig(Config):
-    """Testing configuration."""
+    SECRET_KEY ="aduhiIYGYFE868gYYgugyjg795GGguy"
     TESTING = True

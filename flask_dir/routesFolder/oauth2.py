@@ -1,86 +1,87 @@
-# oauth2.py
-
-from flask import Blueprint, session, request, redirect, url_for
+from flask import Blueprint, render_template, session, request, redirect, url_for
 import time
-from routesFolder.auth_scripts import run_auth, second_auth, get_new_token
-from flask_dir.main import get_user_profile
+from routesFolder.authScripts import run_Auth, second_Auth, getNewToken
+from apiRequests import getUserProfile
 import os
 
-oauth = Blueprint("oauth", __name__)
-
+secret_key = os.getenv('SECRET')
 oauth = Blueprint("oauth", __name__)
 
 @oauth.route('/login')
 def login():
-    """Initiate the login process."""
     session.clear()
-    return spotify_oauth()
+    return spotify_OAuth()
 
 @oauth.route('/logout')
 def logout():
-    """Log out the user by clearing the session."""
     session.clear()
     return redirect(url_for("routes_file.index"))
 
 @oauth.route('/callback')
-def retrieve_code():
-    """Handle the OAuth callback from Spotify."""
+def retrieveCode():
+
+    # Retrieve code from URL
     code = request.args.get("code")
     
-    auth_response, session["token_refresh"] = second_auth(code, os.getenv('SECRET_KEY'))
+    # load session variables from decoded authentication
+    auth_response, session["token_refresh"]  = second_Auth(code, secret_key)
 
     session["req_token"] = auth_response.ACCESS_TOKEN
     session["time_limit"] = auth_response.TIME_LIMIT
     session["token_info"] = auth_response.TOKENS
     session["headers"] = auth_response.HEADERS
 
+    # create expiration date
     session["expires_at"] = int(session['time_limit']) + int(time.time())
     
-    return redirect(url_for('oauth.get_profile'))
+    print("req_token: ", session['req_token'])
+    
+    return redirect(url_for('oauth.getProfile'))
 
-@oauth.route('/get_profile')
-def get_profile():
-    """Retrieve and store the user's Spotify profile information."""
-    user_profile = get_user_profile(session['headers'])
+@oauth.route('/getProfile')
+def getProfile():
+    user_profile = getUserProfile(session['headers'])
     session['display_name'] = user_profile['display_name']
     session['id'] = user_profile['id']
-    session['image_url'] = user_profile['images'][0] if user_profile['images'] else None
+    session['image_url'] = user_profile['images'][0]
 
     return redirect(url_for('routes_file.index'))
 
-def get_token():
-    """
-    Retrieve the current access token or refresh if expired.
+#
+#       HELPER FUNCTIONS
+#
 
-    Returns:
-        str: The current valid access token.
-
-    Raises:
-        Exception: If no token info is available in the session.
-    """
+def getToken():
+    # if token info does not exist, then send back exception
     if not session.get("token_info"):
-        raise Exception("No token info in session")
+        print("no token")
+        raise "exception"
 
+    # get current time
     now = int(time.time())
-    is_expired = session.get("expires_at", 0) - now < 60
+
+    print("expires", session["expires_at"], now)
+
+    is_expired = session["expires_at"] - now < 60
 
     if is_expired:
-        auth_response = get_new_token(session["token_refresh"])
+        print("is expired")
+        # load session variables from decoded authentication
+        auth_response  = getNewToken(session["token_refresh"])
 
         session["req_token"] = auth_response.ACCESS_TOKEN
         session["time_limit"] = auth_response.TIME_LIMIT
         session["token_info"] = auth_response.TOKENS
         session["headers"] = auth_response.HEADERS
 
+        # create expiration date
         session["expires_at"] = int(session['time_limit']) + int(time.time())
     
+    print('haveToken')
     return session['req_token']
 
-def spotify_oauth():
-    """
-    Initiate the Spotify OAuth flow.
-
-    Returns:
-        Response: A redirect to the Spotify authorization URL.
-    """
-    return redirect(run_auth())
+def spotify_OAuth():
+    '''
+    Runs OAuth2 flow by redirecting to URL constructed to be redirected to callback
+    '''
+    return redirect(run_Auth())

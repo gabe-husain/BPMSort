@@ -1,51 +1,64 @@
 {% extends 'base.html' %}
 
-{% block title %}Playlist Details{% endblock %}
-
 {% block content %}
-    <h2>Hello {{ session['display_name'] }}</h2>
-    <h3>Here you can find {{ playlist_data['name'] }}'s tracklist, {{ playlist_data['tracks']['items']|length }} songs</h3>
-
+    <h1>{% block title %} User Playlists {% endblock %}</h1>
+    <h1>Hello {{session['display_name']}}</h1>
+    <h2>Here you can find {{playlistData['name']}}'s tracklist, {{ playlistData['tracks']['items']|length }} songs</h2>
     <section>
-        {% if generated_pl|length > 0 %}
-            {% for key in dict_of_details %}
-                {% if key != 'id' %}
-                    <div>
-                        {{ key }}: {{ dict_of_details[key] }}
-                    </div>
-                {% endif %}
+        <form method="POST" action="">
+            <input type="submit" id="BPM" name="BPM" value="Generate BPM Playlist">
+            <input type="submit" id="GEN" name="GEN" value="Create BPM Playlist">
+        </form>
+        {% if generatedPL|length > 0 %}
+            {% for key in dictOfDetails: %}
+            {% if key != 'id' %}
+                <div>
+                    <span>{{ key }}: </span> <span>{{ dictOfDetails[key] }} </span>
+                </div>
+            {% endif %}
+                
             {% endfor %}
-
-            {% for Track in generated_pl %}
+            {% if generatedPL|length > 0 %}
+                {% for Track in generatedPL: %}
                 <div>
                     {% if Track['track']['album']['images']|length > 0 %}
-                        <img src="{{ Track['track']['album']['images'][0]['url'] }}" alt="{{ Track['track']['name'] }}" height="4%" width="4%">
+                    <img src= {{ Track['track']['album']['images'][0]['url'] }} height="4%", width="4%">
                     {% endif %}
-                    {{ Track['track']['name'] }} {{ list_of_bpm[loop.index0] }}
+                    
+                    <span>
+                        {{ Track['track']['name'] }}
+                    </span>
+                    <span>
+                        {{ listOfBPM[loop.index0] }}
+                    </span>
+                    
                 </div>
-            {% endfor %}
+                {% endfor %}
+            {% else %}
+                <span>No Tracks</span>
+            {% endif %}
+        {% else %}
         {% endif %}
     </section>
-
-    <div>Old Playlist</div>
-
+    <div><span>Old Playlist</span></div>
     <section>
-        {% if playlist_data['tracks']['items']|length > 0 %}
-            {% for Track in playlist_data['tracks']['items'] %}
-                <div>
-                    {% if Track['track']['album']['images']|length > 0 %}
-                        <img src="{{ Track['track']['album']['images'][0]['url'] }}" alt="{{ Track['track']['name'] }}" height="4%" width="4%">
-                    {% endif %}
+        {% if playlistData['tracks']['items']|length > 0 %}
+            {% for Track in playlistData['tracks']['items']: %}
+            <div>
+                {% if Track['track']['album']['images']|length > 0 %}
+                <img src= {{ Track['track']['album']['images'][0]['url'] }} height="4%", width="4%">
+                {% endif %}
+                
+                <span>
                     {{ Track['track']['name'] }}
-                </div>
+                </span>
+                
+            </div>
             {% endfor %}
         {% else %}
-            <p>No Tracks</p>
+            <span>No Tracks</span>
         {% endif %}
-    </section>
 
-    <form method="post">
-        <button type="submit" name="BPM">Sort by BPM</button>
-        <button type="submit" name="GEN">Generate BPM Playlist</button>
-    </form>
+    </section>
+    
 {% endblock %}

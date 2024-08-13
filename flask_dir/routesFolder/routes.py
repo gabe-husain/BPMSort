@@ -1,200 +1,236 @@
-# routes.py
-
-from flask import Blueprint, redirect, session, request, url_for, render_template
+from flask import Flask, Blueprint, redirect, request_finished, session, request, url_for, render_template
+from apiRequests import getPlaybackState
 from PIL import Image
 import urllib.request
+import sys
+import os
+from routesFolder.oauth2 import run_Auth, second_Auth, getToken
+from apiRequests import getUserPlaylists, getUserProfile, getPlaylistDetails, generateBPM, createBPM
+import statistics
 import colorsys
-from typing import Tuple
-from routesFolder.oauth2 import get_token, oauth
-from flask_dir.main import (
-    get_user_playlists, get_user_profile, get_playlist_details,
-    generate_bpm, create_bpm_playlist, spotify_request
-)
 
+secret_key = os.getenv('SECRET')
 routes_file = Blueprint("routes_file", __name__)
+req_token, token_refresh, time_limit, expires_at, headers = "","","", 0, {}
 
 @routes_file.route('/')
 @routes_file.route('/index')
 def index():
-    """Render the index page."""
     return render_template('base.html')
 
-@routes_file.route('/user_playlists', methods=['GET', 'POST'])
-def get_playlists():
-    """
-    Retrieve and display user playlists.
-    
-    Returns:
-        str: Rendered HTML template with playlist data
-    """
-    try:
-        token_info = get_token()
-    except Exception:
-        return redirect(url_for('oauth.login', external=True))
 
-    limit = 50
+#
+#       Routes
+#
+
+@routes_file.route('/UserPlaylists')
+@routes_file.route('/UserPlaylists', methods = ['POST', 'GET'])
+def getPlaylists():
+    refresh = request.args.get("refresh", default=False, type=bool)
+    trackTotal = 50
     offset = request.args.get("offset", default=0, type=int)
 
-    playlists, next_status = get_user_playlists(session['headers'], limit, offset)
+    try:
+        print("tried")
+        token_info = getToken()
+    except:
+        print("no token", session['req_token'])
+        return redirect(url_for('oauth.login', external=True))
+
+    # wait for REDIS implementation
+
+    playlists, nextStatus = getUserPlaylists(session['headers'], trackTotal, offset)
 
     if request.method == 'POST':
+        # only my playlists
         if 'omp' in request.form:
-            playlists['items'] = [p for p in playlists['items'] if p['owner']['id'] == session['id']]
+            for index, playlist in enumerate(playlists['items']):
+                if playlist['owner']['id'] != session['id']:
+                    del playlists['items'][index]
+        elif 'refresh' in request.form:
+            pass
+            # When REDIS is implemented this can be changed
+            # playlists = getUserPlaylists(session['headers'], 50)
+        else:
+            pass
 
-    potential_offset = offset + limit
+    data = playlists
+
+    # Create potential offset
+    potentialOffset = offset + trackTotal
+
+    print(nextStatus)
 
     return render_template(
         'UserPlaylists.html',
-        data=playlists,
-        offer_offset=next_status,
-        offset=potential_offset
-    )
+        data=data,
+        offerOffset = nextStatus,
+        offset = potentialOffset )
 
-@routes_file.route('/playlist', methods=['GET', 'POST'])
-def playlist_details():
-    """
-    Display playlist details and handle BPM sorting.
-    
-    Returns:
-        str: Rendered HTML template with playlist details
-    """
-    playlist_href = request.args.get("href")
-    playlist_data = get_playlist_details(playlist_href, session['headers'])
-    
-    generated_pl = {}
-    list_of_bpm = []
-    dict_of_details = {}
-
+@routes_file.route('/playlist')
+@routes_file.route('/playlist', methods = ['POST', 'GET'])
+def playlistDetails():
+    playlistHref = request.args.get("href")
+    playlistData = getPlaylistDetails(playlistHref, session['headers'])
+    BPM = False
+    GEN = False
+    generatedPL = {}
+    listOfBPM = []
+    dictOfDetails = {}
     if request.method == 'POST':
-        if 'BPM' in request.form or 'GEN' in request.form:
-            generated_pl, list_of_uri, list_of_bpm, dict_of_details = generate_bpm(playlist_data, session['headers'])
-            
-            if 'GEN' in request.form:
-                create_bpm_playlist(list_of_uri, playlist_data['name'], session['headers'])
-
+        if 'BPM' in request.form:
+            generatedPL, listOfURI, listOfBPM, dictOfDetails = generateBPM(playlistData, session['headers'])
+        elif 'GEN' in request.form:
+            generatedPL, listOfURI, listOfBPM, dictOfDetails = generateBPM(playlistData, session['headers'])
+            createBPM(listOfURI, playlistData['name'], session['headers'])
+        else:
+            pass
+    # session['currentPlaylist'] = playlist_data
     return render_template(
         'PlaylistDetails.html',
-        playlist_data=playlist_data,
-        generated_pl=generated_pl,
-        dict_of_details=dict_of_details,
-        list_of_bpm=list_of_bpm
-    )
+        playlistData=playlistData,
+        generatedPL=generatedPL,
+        dictOfDetails=dictOfDetails,
+        listOfBPM=listOfBPM
+        )
 
-@routes_file.route('/player')
-def player():
-    """
-    Render the player page with current playback information.
-    
-    Returns:
-        str: Rendered HTML template with player information
-    """
-    try:
-        response = spotify_request('get', 'me/player/currently-playing', headers=session['headers'])
-        
-        if response and response.get('item'):
-            image_url = response["item"]["album"]['images'][0]['url']
-            image_path = "nowPlaying.jpeg"
-            urllib.request.urlretrieve(image_url, image_path)
 
-            dominant_color = get_dominant_color(image_path)
-            
-            artist = response["item"]["artists"][0]['name']
-            title = response["item"]["name"]
-            time = response["item"]["duration_ms"] - response["progress_ms"] + 100
-        else:
-            raise Exception("No track currently playing")
-    except Exception as e:
-        print(f"Error processing playback state: {e}")
-        image_url = "https://upload.wikimedia.org/wikipedia/commons/a/ac/No_image_available.svg"
-        time = 10000
-        dominant_color = (0, 0, 0)
-        artist = "No artist"
-        title = "No title"
+#
+#       HELPER FUNCTIONS
+#
 
-    text_color, subtitle_color = get_text_colors(dominant_color)
+from PIL import Image
+import urllib.request
+import colorsys
+import random
+import math
 
-    return render_template(
-        "albumCover.html",
-        image=image_url,
-        time=time,
-        red=dominant_color[0],
-        green=dominant_color[1],
-        blue=dominant_color[2],
-        text_color=text_color,
-        subtitle_color=subtitle_color,
-        artist=artist,
-        title=title,
-    )
+def euclidean_distance(color1, color2):
+    return sum((a - b) ** 2 for a, b in zip(color1, color2)) ** 0.5
 
-def get_dominant_color(image_path: str, k: int = 2) -> Tuple[int, int, int]:
+def simple_kmeans(pixels, k=4, max_iterations=20):
+    # Randomly initialize centroids
+    centroids = random.sample(pixels, k)
+
+    for _ in range(max_iterations):
+        # Assign pixels to nearest centroid
+        clusters = [[] for _ in range(k)]
+        for pixel in pixels:
+            closest_centroid = min(range(k), key=lambda i: euclidean_distance(pixel, centroids[i]))
+            clusters[closest_centroid].append(pixel)
+
+        # Update centroids
+        new_centroids = []
+        for cluster in clusters:
+            if cluster:
+                new_centroid = tuple(int(sum(col) / len(cluster)) for col in zip(*cluster))
+                new_centroids.append(new_centroid)
+            else:
+                new_centroids.append(random.choice(pixels))
+
+        # Check for convergence
+        if new_centroids == centroids:
+            break
+
+        centroids = new_centroids
+
+    # Find the largest cluster
+    largest_cluster = max(clusters, key=len)
+
+    # Return the centroid of the largest cluster
+    return tuple(int(sum(col) / len(largest_cluster)) for col in zip(*largest_cluster))
+
+def get_dominant_color(image_path, k=2):
     """
     Find the dominant color in an image using a simple clustering algorithm.
 
     Args:
-        image_path (str): Path to the image file.
-        k (int): Number of color clusters to use.
+    image_path (str): Path to the image file.
+    k (int): Number of color clusters to use.
 
     Returns:
-        Tuple[int, int, int]: RGB values of the dominant color.
+    tuple: RGB values of the dominant color.
     """
+    # Open the image and resize it to reduce processing time
     img = Image.open(image_path)
-    img = img.copy()
+    img = img.copy()  # Create a copy to avoid modifying the original image
     img.thumbnail((100, 100))
+
+    # Convert image to RGB mode if it's not already
     img = img.convert('RGB')
+
+    # Get list of all pixels
     pixels = list(img.getdata())
 
-    def euclidean_distance(color1, color2):
-        return sum((a - b) ** 2 for a, b in zip(color1, color2)) ** 0.5
+    # Perform clustering
+    dominant_color = simple_kmeans(pixels, k)
 
-    def simple_kmeans(pixels, k, max_iterations=20):
-        import random
-        centroids = random.sample(pixels, k)
+    return dominant_color
 
-        for _ in range(max_iterations):
-            clusters = [[] for _ in range(k)]
-            for pixel in pixels:
-                closest_centroid = min(range(k), key=lambda i: euclidean_distance(pixel, centroids[i]))
-                clusters[closest_centroid].append(pixel)
-
-            new_centroids = []
-            for cluster in clusters:
-                if cluster:
-                    new_centroid = tuple(int(sum(col) / len(cluster)) for col in zip(*cluster))
-                    new_centroids.append(new_centroid)
-                else:
-                    new_centroids.append(random.choice(pixels))
-
-            if new_centroids == centroids:
-                break
-
-            centroids = new_centroids
-
-        largest_cluster = max(clusters, key=len)
-        return tuple(int(sum(col) / len(largest_cluster)) for col in zip(*largest_cluster))
-
-    return simple_kmeans(pixels, k)
-
-def get_text_colors(background_color: Tuple[int, int, int]) -> Tuple[str, str]:
+@routes_file.route('/player')
+def player():
     """
-    Calculate appropriate text colors based on the background color.
+    Renders the player page with album cover and song information.
 
-    Args:
-        background_color (Tuple[int, int, int]): RGB values of the background color.
+    This function retrieves the current playback state from Spotify,
+    downloads the album cover, processes it to determine the dominant color,
+    and prepares color schemes for the page. It then renders the albumCover.html
+    template with the processed information.
 
     Returns:
-        Tuple[str, str]: Hex color codes for main text and subtitle text.
+        rendered_template: A Flask response object containing the rendered HTML.
     """
-    r, g, b = background_color
-    h, l, s = colorsys.rgb_to_hls(r/255, g/255, b/255)
+    response = getPlaybackState(session['headers'])
+    try:
+        image = response["item"]["album"]['images'][0]['url']
+        image_path = "nowPlaying.jpeg"
+        urllib.request.urlretrieve(image, image_path)
 
+        # Get the dominant color
+        red, green, blue = get_dominant_color(image_path)
+
+        artist = response["item"]["artists"][0]['name']
+        title = response["item"]["name"]
+        time = response["item"]["duration_ms"] - response["progress_ms"] + 100
+    except Exception as e:
+        print(e)
+        image = "https://upload.wikimedia.org/wikipedia/commons/a/ac/No_image_available.svg"
+        time = 10000
+        red, green, blue = 0, 0, 0
+        try:
+            image = response["item"]["album"]['images'][0]['url']
+        except:
+            pass
+        artist = "no artist"
+        title = "no title"
+
+    # Convert RGB to HSL
+    h, l, s = colorsys.rgb_to_hls(red/255, green/255, blue/255)
+
+    # Adjust lightness for subtitle color
     if l > 0.5:
-        text_color = "#212121"
-        subtitle_l = max(0, l - 0.2)
+        subtitle_l = max(0, l - 0.2)  # Darker for light backgrounds
     else:
-        text_color = "#FFFFFF"
-        subtitle_l = min(1, l + 0.2)
+        subtitle_l = min(1, l + 0.2)  # Lighter for dark backgrounds
 
+    # Convert back to RGB
     subtitle_r, subtitle_g, subtitle_b = colorsys.hls_to_rgb(h, subtitle_l, s)
-    subtitle_color = f"#{int(subtitle_r*255):02x}{int(subtitle_g*255):02x}{int(subtitle_b*255):02x}"
+    subtitle_r, subtitle_g, subtitle_b = int(subtitle_r*255), int(subtitle_g*255), int(subtitle_b*255)
 
-    return text_color, subtitle_color
+    textColor = "#212121" if l > 0.5 else "#FFFFFF"
+    subtitleColor = f"rgb({subtitle_r}, {subtitle_g}, {subtitle_b})"
+
+    print(f"Background color: rgb({red}, {green}, {blue})")
+    print(f"Subtitle color: {subtitleColor}")
+
+    return render_template("albumCover.html",
+        image=image,
+        time=time,
+        red=red,
+        blue=blue,
+        green=green,
+        textColor=textColor,
+        subtitleColor=subtitleColor,
+        artist=artist,
+        title=title,
+    )
