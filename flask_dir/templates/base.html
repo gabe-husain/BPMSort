@@ -1,22 +1,34 @@
-<!doctype html>
-<title>{% block title %}{% endblock %} - Flaskr</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<nav>
-  <h1>Spotify API</h1>
-  <ul>
-    {% if session['display_name'] %}
-      <li><span>your name is {{ session['display_name'] }}</span>
-      <li><a href="{{ url_for('routes_file.getPlaylists') }}"><span>get playlists here</span></a>
-      <li><a href="{{ url_for('routes_file.player') }}">Player</a>
-      <li><a href="{{ url_for('oauth.logout') }}">Log Out</a>
-    {% else %}
-        <li><a href="{{ url_for('oauth.login') }}">Log In</a>
-    {% endif %}
-  </ul>
-</nav>
-<section class="content">
-  <header>
-    {% block header %}{% endblock %}
-  </header>
-  {% block content %}{% endblock %}
-</section>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %} - Spotify BPM Sorter</title>
+</head>
+<body>
+    <header>
+        <h1>Spotify API</h1>
+        <nav>
+            <ul>
+                {% if session['display_name'] %}
+                    <li>Your name is {{ session['display_name'] }}</li>
+                    <li><a href="{{ url_for('routes_file.get_playlists') }}"><span>Get playlists here</span></a></li>
+                    <li><a href="{{ url_for('routes_file.player') }}"><span>Player</span></a></li>
+                    <li><a href="{{ url_for('oauth.logout') }}"><span>Log Out</span></a></li>
+                {% else %}
+                    <li><a href="{{ url_for('oauth.login') }}"><span>Log In</span></a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="content">
+            <div>
+                {% block header %}{% endblock %}
+            </div>
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+</body>
+</html>
