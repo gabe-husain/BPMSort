@@ -1,480 +1,258 @@
-from operator import itemgetter
+# main.py
+
 import os
-from typing import Any
-from urllib.parse import quote, urlsplit, parse_qs
+from typing import Any, Dict, List, Tuple, Optional
+from urllib.parse import quote
 import json
 from flask import url_for, redirect, session
 import requests
 import time
+from functools import wraps
 
 API_URL = 'https://api.spotify.com/v1/'
 
+class SpotifyAPIError(Exception):
+    """Custom exception for Spotify API errors."""
+    pass
 
-def tryGetSpotifyRequest(uri, retryTime=0, debug=False, **args):
-    '''
-    Takes in a uri and args, wraps the request for python requests module. 
-    This allows for centralized rate limiting controls and more abstraction
+def retry_on_failure(max_retries: int = 3, delay: int = 1):
+    """
+    Decorator to retry a function on failure.
 
-    :param uri: The endpoint for request
-    :type uri: String
-    :param **args: any acommpanying arguments
-    :type **args: any, though typically dict
+    Args:
+        max_retries (int): Maximum number of retry attempts.
+        delay (int): Delay between retries in seconds.
 
-    :return: response decoded
-    :rtype: dict 
-    '''
-    if retryTime == 10:
-        print("tried 10 times, didn't work")
-        return redirect(url_for('routes_file.index', external=True))
+    Returns:
+        function: Decorated function with retry logic.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        raise
+                    print(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay} seconds...")
+                    time.sleep(delay)
+        return wrapper
+    return decorator
+
+@retry_on_failure(max_retries=3)
+def spotify_request(method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+    """
+    Make a request to the Spotify API.
+
+    Args:
+        method (str): HTTP method ('get' or 'post').
+        endpoint (str): The API endpoint (excluding the base URL).
+        **kwargs: Additional arguments for the request.
+
+    Returns:
+        Dict[str, Any]: JSON response from the API.
+
+    Raises:
+        SpotifyAPIError: If the request fails or returns an error status.
+    """
+    url = f"{API_URL}{endpoint}"
     try:
-        r = requests.get(uri, **args)
+        if method.lower() == 'get':
+            response = requests.get(url, **kwargs)
+        elif method.lower() == 'post':
+            response = requests.post(url, **kwargs)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
 
-        if debug:
-            print(r.text)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        raise SpotifyAPIError(f"Spotify API request failed: {e}")
 
-        if r.status_code >= 400:
-            raise Exception("Not okay")
-        print("Made GET request")
-        response = json.loads(r.text)
+def get_user_playlists(header: Dict[str, str], limit: int = 50, offset: int = 0) -> Tuple[Dict[str, Any], Optional[str]]:
+    """
+    Retrieve user playlists from Spotify API.
 
-        return response
-    except:
-        time.sleep(1)
-        tryGetSpotifyRequest(uri, retryTime=retryTime+1, **args)
+    Args:
+        header (Dict[str, str]): Authorization headers.
+        limit (int): Number of playlists to retrieve (max 50).
+        offset (int): Starting position for retrieval.
 
-def tryPostSpotifyRequest(uri, retryTime=0, debug=False, **args):
-    '''
-    Takes in a uri and args, wraps the request for python requests module. 
-    This allows for centralized rate limiting controls and more abstraction
-
-    :param uri: The endpoint for request
-    :type uri: String
-    :param **args: any acommpanying arguments
-    :type **args: any, though typically dict
-
-    :return: response decoded
-    :rtype: dict 
-    '''
-    if retryTime == 1:
-        print("tried 1 times, didn't work")
-        return redirect(url_for('routes_file.index', external=True))
-    try:
-        r = requests.post(uri, **args)
-
-        if debug:
-            print(r.text)
-            print(r.url)
-
-        if r.status_code >= 400:
-            raise Exception("Not okay")
-        print("Made Post request")
-        response = json.loads(r.text)
-        return response
-    except:
-        time.sleep(1)
-        tryPostSpotifyRequest(uri, retryTime=retryTime+1, **args)
-
-def getRemainingPlaylists(header=dict, number=int, offset = 0):
-    '''
-    Single api call to return the 50 playlists or less.
-
-    :param header: headers to be used for the request
-    :type header: dict
-    :param number: non-null integer smaller or equal to 50 of playlists to request
-    :type number: 50 >= int > 0
-    :param offset: starting position for request
-    :type offset: int
-
-    :return: Spotify Playlists
-    :rtype: dict of <=50 items
-    ---
-    :return example: {
-        "href": "",
-        "items": [ {} ],
-        "limit": int,
-        "next": "parsed api req",
-        "offset": int,
-        "previous": "parsed api req",
-        "total": int
-        }
-    '''
-    assert 50 >= number > 0
-    params_limit = {
-        'limit' : number,
-        'offset' : offset
+    Returns:
+        Tuple[Dict[str, Any], Optional[str]]: Tuple containing playlist data and next page URL (if available).
+    """
+    params = {
+        'limit': min(limit, 50),
+        'offset': offset
     }
     
-    working_response = tryGetSpotifyRequest(
-        API_URL + 'me/playlists/', 
-        headers=header, 
-        params=params_limit)
+    response = spotify_request('get', 'me/playlists/', headers=header, params=params)
+    return response, response.get('next')
 
+def get_user_profile(header: Dict[str, str]) -> Dict[str, Any]:
+    """
+    Retrieve user profile information from Spotify API.
 
-    return working_response
+    Args:
+        header (Dict[str, str]): Authorization headers.
 
-def getUserPlaylists(header=dict, number = 50, offset = 0):
-    '''
-    takes in header and non-null number of playlists to return, 
-    updates main response and returns the amount specified by repeating api calls
+    Returns:
+        Dict[str, Any]: User profile data.
+    """
+    return spotify_request('get', 'me/', headers=header)
 
-    :param header: headers to be used for the request
-    :type header: dict
-    :param number: non-null integer of playlists to return
-    :type number: 50 >= int > 0
+def get_playlist_details(href: str, header: Dict[str, str]) -> Dict[str, Any]:
+    """
+    Retrieve detailed information about a specific playlist.
 
-    :return: Spotify Playlists
-    :rtype: dict
-    ---
-    :return example: {
-        "href": "",
-        "items": [ {} ],
-        "limit": int,
-        "next": "parsed api req",
-        "offset": int,
-        "previous": "parsed api req",
-        "total": int
-        }
-    '''
-    assert number > 0
+    Args:
+        href (str): API endpoint for the playlist.
+        header (Dict[str, str]): Authorization headers.
 
-    # if there are less than 50 playlists requested, then this will work only once
-    if number <= 50:
-        working_response = getRemainingPlaylists(header, number, offset)
-        
-        next_status = working_response['next']
+    Returns:
+        Dict[str, Any]: Detailed playlist information including all tracks.
+    """
+    response = spotify_request('get', href, headers=header)
+    full_response = response.copy()
     
-    # otherwise, multiple api calls
-    
-    else:
-        # First API Call
-        working_response = getRemainingPlaylists(header, 50, offset)
-        number -= 50
-
-        next_status = working_response['next']
-
-        while next_status and number > 0:
-            decoded_page = tryGetSpotifyRequest(
-                    next_status, 
-                    headers=header
-                )
-            
-            working_response['items'] += decoded_page['items'][:min(number, 50)]
-            number -= len(decoded_page['items'][:min(number, 50)])
-
-            next_status = decoded_page['next']
-            print(number)
-            
-
-    return working_response, next_status
-
-def getUserProfile(header=dict):
-    '''
-    Makes a request to the me/ endpoint of Spotify to retrieve user data
-
-    :param header: headers to be used for the request
-    :type header: dict
-
-    :return: User Profile elements
-    :rtype: dict
-    ---
-    :return example: {
-        "country": "string",
-        "display_name": "string",
-        "email": "string",
-        "explicit_content": {},
-        "external_urls": {},
-        "followers": {},
-        "href": "string",
-        "id": "string",
-        "images": [],
-        "product": "string",
-        "type": "string",
-        "uri": "string"
-        }
-    '''
-    response = tryGetSpotifyRequest(
-        API_URL + 'me/', 
-        headers=header
-        )
-    return response
-
-def getPlaylistDetails(href=str, header=dict):
-    '''
-    Takes in an api endpoint for a specific playlist
-    Gets a playlist and subsequent tracks and data
-
-    :param uri: Playlist uri
-    :type header: String
-    :param href: api request can be fed in
-    :type header: String
-    :param header: headers to be used for the request
-    :type header: dict
-
-    :return: User Profile elements
-    :rtype: dict
-    ---
-    :return example: {
-    "collaborative": Bool,
-    "description": "string",
-    "external_urls": {},
-    "followers": {},
-    "href": "string",
-    "id": "string",
-    "images": [ {} ],
-    "name": "string",
-    "owner": { userObj },
-    "public": true,
-    "snapshot_id": "string",
-    "tracks": {
-        "href": String,
-        "items": [ {} ],
-        "limit": int,
-        "next": String,
-        "offset": int,
-        "previous": String,
-        "total": int },
-    "type": "playlist",
-    "uri": String
-    }
-    '''
-    response = tryGetSpotifyRequest(
-        href, 
-        headers=header
-    )
-    full_response = response
-    next = response['tracks']['next']
-    while next != None:
-        response = tryGetSpotifyRequest(
-            next, 
-            headers=header)
-        next = response['next']
-        full_response['tracks']['items'] += response['items']
+    while response.get('tracks', {}).get('next'):
+        response = spotify_request('get', response['tracks']['next'], headers=header)
+        full_response['tracks']['items'].extend(response['items'])
+        full_response['tracks']['next'] = response.get('next')
 
     return full_response
 
-def getAudioFeatures(listOfTrackIDs=list, header=dict):
-    '''
-    Takes in a list of tracks, and returns a dictionary containing their audio features
+def get_audio_features(track_ids: List[str], header: Dict[str, str]) -> Dict[str, Any]:
+    """
+    Retrieve audio features for a list of tracks.
 
-    :param listOfTrackIDs: List of Tracks as returned by the playlist endpoint smaller than 100
-    :type listOfTrackIDs: list
-    :param header: headers for get request
-    :type header: dict
+    Args:
+        track_ids (List[str]): List of Spotify track IDs.
+        header (Dict[str, str]): Authorization headers.
+
+    Returns:
+        Dict[str, Any]: Audio features for the specified tracks.
+    """
+    ids_string = ",".join(track_ids)
+    return spotify_request('get', 'audio-features', headers=header, params={"ids": ids_string})
+
+def generate_details(header: Dict[str, str], 
+                     playlist_items: List[Dict[str, Any]], 
+                     sort_by: str = 'tempo',
+                     details: List[str] = ['id', 'tempo', 'danceability', 'energy', 'loudness'],
+                     average_ignore: List[str] = ['id', 'tempo']) -> Tuple[List[Dict[str, Any]], List[str], Dict[str, Any]]:
+    """
+    Generate detailed information about tracks in a playlist, including audio features.
+
+    Args:
+        header (Dict[str, str]): Authorization headers.
+        playlist_items (List[Dict[str, Any]]): List of tracks in the playlist.
+        sort_by (str): Audio feature to sort the tracks by.
+        details (List[str]): List of audio features to include in the results.
+        average_ignore (List[str]): List of features to ignore when calculating averages.
+
+    Returns:
+        Tuple[List[Dict[str, Any]], List[str], Dict[str, Any]]:
+            - List of tracks sorted by the specified feature
+            - List of track URIs
+            - Dictionary of audio feature details
+    """
+    track_ids = [item['track']['id'] for item in playlist_items if item['track']['id']]
     
-    :return: Dictionary of list of audio features
-    :rtype: dict
+    audio_features = []
+    for i in range(0, len(track_ids), 100):
+        chunk = track_ids[i:i+100]
+        response = get_audio_features(chunk, header)
+        audio_features.extend(response['audio_features'])
 
-    ---
-
-
-    '''
-    stringListOfTrackIDs = ""
-
-    for track in listOfTrackIDs:
-        try:
-            stringListOfTrackIDs += track['track']['id'] + ","
-        except:
-            pass
-
-    # remove comma
-    stringListOfTrackIDs = stringListOfTrackIDs[:-1]
-    print(stringListOfTrackIDs)
-
-    response = tryGetSpotifyRequest(
-        API_URL + 'audio-features', 
-        headers=header, 
-        params={
-            "ids" : stringListOfTrackIDs
-            }
-        )
+    sorted_features = sorted(audio_features, key=lambda x: x.get(sort_by, 0))
     
-    return response
+    details_dict = {detail: [track.get(detail) for track in sorted_features] for detail in details}
     
+    for key in details_dict:
+        if key not in average_ignore:
+            values = [v for v in details_dict[key] if v is not None]
+            details_dict[f'average_{key}'] = sum(values) / len(values) if values else 0
 
-def generateDetails(
-    PLItems=list, 
-    sortBy='tempo',
-    details=list, 
-    averageIgnore=list, 
-    header=dict):
-    '''
-    
-    
-    '''
+    sorted_tracks = sorted(playlist_items, key=lambda x: details_dict['id'].index(x['track']['id']))
+    track_uris = [track['track']['uri'] for track in sorted_tracks]
 
- 
-    # generate trackID list for spotify request
-    
-    # Clean PLItems
-    
-    PLItemsLength = len(PLItems)
-    fullResponse = {'audio_features': []}
-    offset = 0
+    return sorted_tracks, track_uris, details_dict
 
-    while PLItemsLength > 0:
+def generate_bpm(playlist_data: Dict[str, Any], header: Dict[str, str]) -> Tuple[List[Dict[str, Any]], List[str], List[float], Dict[str, Any]]:
+    """
+    Generate BPM-sorted playlist data.
 
-        # set current playlist items to handle
-        currPLItems = PLItems[offset : offset + min(100, PLItemsLength)]
-        print(currPLItems == PLItems[100 : 200], offset, offset + min(100, PLItemsLength))
-        
-        
-        response = getAudioFeatures(currPLItems, header=header)
-        # add to complete response
-        fullResponse['audio_features'] += response['audio_features']
-        # onto the next 100
-        PLItemsLength -= min(100, PLItemsLength)
-        offset += 100
+    Args:
+        playlist_data (Dict[str, Any]): Original playlist data.
+        header (Dict[str, str]): Authorization headers.
 
-        
-
-    # sort audio features
-    audio_features = sorted(fullResponse['audio_features'], key=itemgetter(sortBy))
-        # and creates the dict of details for all of those sorted songs by what should be sorted
-    dictOfDetails = createDictOfDetails(audio_features, details, averageIgnore=averageIgnore)
-
-    # Creates new list that simply has the ids of each songs
-    listOfTrackIDs = dictOfDetails['id']
-
-    # sort playlist items for representation
-    newTracks = sorted(PLItems, key=lambda x: listOfTrackIDs.index(x['track']['id']))
-
-    # Finalize cool list
-    SortedBy = dictOfDetails[sortBy]
-    dictOfDetails['average' + sortBy] = sum(SortedBy)/len(SortedBy)
-
-    print(dictOfDetails)
-
-    # extract URI
-    listOfURI = []
-    for track in newTracks:
-        listOfURI.append(track['track']['uri'])
-
-    return newTracks, listOfURI, dictOfDetails
-
-def generateBPM(playlistData=dict, header=dict):
-    '''
-    Creates BPM playlist and returns stuff
-    generates ordered list
-
-    '''
-    if playlistData['tracks']['items']:
-        PLItems = playlistData['tracks']['items']
-
-    
-    newTracks, listOfURI, dictOfDetails = generateDetails(
-        PLItems=PLItems,
+    Returns:
+        Tuple[List[Dict[str, Any]], List[str], List[float], Dict[str, Any]]:
+            - Sorted list of tracks
+            - List of track URIs
+            - List of BPM values
+            - Dictionary of audio feature details
+    """
+    playlist_items = playlist_data['tracks']['items']
+    sorted_tracks, track_uris, details_dict = generate_details(
+        header,
+        playlist_items,
+        sort_by='tempo',
         details=['id', 'tempo', 'danceability', 'energy', 'loudness'],
-        averageIgnore=['id', 'tempo'],
-        header=header
+        average_ignore=['id', 'tempo'],
     )
-    listOfBPM = dictOfDetails['tempo']
     
-    return newTracks, listOfURI, listOfBPM, dictOfDetails
-    
+    return sorted_tracks, track_uris, details_dict['tempo'], details_dict
 
-def createDictOfDetails(audio_features=list, params=dict, averageIgnore=[], average=False):
-    '''
-    Given a List of dictionaries returned by Spotify, this collects and creates a dictionary of lists 
-    where the key is given by a list of params and the list of values is generated
-    
-    :param audio_features: List of Tracks to filter through
-    :type audio_features: dict
-    :param params: List of attributes to filter for
-    :type params: dict
-    :param average: Averages all Details
-    :type average: bool
-    :param averageIgnore: Creates average but ignores values in list
-    :type averageIgnore: list default []
+def create_bpm_playlist(track_uris: List[str], name: str, header: Dict[str, str]) -> str:
+    """
+    Create a new playlist sorted by BPM.
 
-    ---
-    :Example:
-    >>> createDictOfDetails(audio_features= audioFeatures, params=params, averageIgnore=['id'])
-    >>> {'acousticness': 0.00242, 'id': ['2takcwOaAZWiXQijPHIx7B', '2takeOnMeade4WR'], 'energy': 0.842}
-    '''
-    collectiveDict = {}
-    
-    for attribute in params:
-            # Iterate through the list of parameters
-            collectiveDict[attribute] = []
-    for track in audio_features:
-        # per each track
-        for attribute in params:
-            # Iterate through the list of parameters
-            collectiveDict[attribute] += [track[attribute]]
-    
-    if average or averageIgnore:
-        for attribute in collectiveDict:
-            if attribute not in averageIgnore:
-                values = collectiveDict[attribute]
-                collectiveDict[attribute] = sum(values)/len(values)
+    Args:
+        track_uris (List[str]): List of Spotify track URIs.
+        name (str): Name for the new playlist.
+        header (Dict[str, str]): Authorization headers.
 
-    return collectiveDict
+    Returns:
+        str: ID of the newly created playlist.
 
-def addTracks(playlistID=str, listOfTrackURIs=list, header=dict):
-    '''
-    Adds tracks to a playlist
-    Performs an apiRequests
+    Raises:
+        SpotifyAPIError: If playlist creation or track addition fails.
+    """
+    if 'id' not in session:
+        raise SpotifyAPIError("User ID not found in session")
 
-    '''
-    tryPostSpotifyRequest(
-        API_URL + "playlists/" + playlistID + "/tracks",
-        headers=header, 
-        debug=True,
-        json = {
-                "uris" : listOfTrackURIs
-            }
+    user_id = session['id']
+    playlist_name = f"BPM playlist: {name}"
+
+    try:
+        # Create new playlist
+        response = spotify_request(
+            'post',
+            f"users/{user_id}/playlists",
+            headers=header,
+            json={"name": playlist_name, "public": False}
         )
+        playlist_id = response['id']
 
-def createBPM(listOfURIs=str, name=str, header=dict):
-    '''
-    Creates BPM playlist
-    Performs an apiRequests
+        # Add tracks to the playlist
+        for i in range(0, len(track_uris), 100):
+            chunk = track_uris[i:i+100]
+            spotify_request(
+                'post',
+                f"playlists/{playlist_id}/tracks",
+                headers=header,
+                json={"uris": chunk}
+            )
 
-    '''
-    # does the session check
-    if not session['id']:
-        redirect(url_for("routes_file.getProfile", external=True))
-    id = session['id']
+        return playlist_id
+    except SpotifyAPIError as e:
+        raise SpotifyAPIError(f"Failed to create BPM playlist: {e}")
 
-    PLname = "BPM playlist " + name
+# Additional helper functions can be added here as needed
 
-    #creates a BPM playlist for the user
-    response = tryPostSpotifyRequest(
-        API_URL + "users/" + id + "/playlists",
-        headers=header, 
-        debug=True,
-        json = {
-            "name" : PLname,
-            "public": False
-            }
-        )
-    print(response.keys())
-    playlistID = response['id']
-    time.sleep(1)
-    
-    PLItemsLength = len(listOfURIs)
-    offset = 0
-
-    while PLItemsLength > 0:
-        # set current playlist items to handle
-        response = addTracks(
-            playlistID, 
-            listOfURIs[offset : offset + min(100, PLItemsLength)], 
-            header=header)
-        # onto the next 100
-        PLItemsLength -= min(100, PLItemsLength)
-
-
-from flask import Flask, Blueprint, session
-# import redis
-# from flask_redis import FlaskRedis
-# in the meantime
-from routesFolder.routes import routes_file
-import os
-
-
-app = Flask(__name__)
-# redis_client = FlaskRedis(app)
-app.config.from_object("configFile.DevelopmentConfig")
-app.config["SESSION_COOKIE_NAME"] = 'Spotify Sesh'
-app.register_blueprint(routes_file)
+if __name__ == "__main__":
+    print("This module contains helper functions for Spotify API interactions.")
+    print("It should be imported and used in other parts of the application.")
