@@ -34,7 +34,7 @@ def getPlaylists():
         print("tried")
         token_info = getToken()
     except:
-        print("no token", session['req_token'])
+        print("no token")
         return redirect(url_for('oauth.login', external=True))
 
     # wait for REDIS implementation

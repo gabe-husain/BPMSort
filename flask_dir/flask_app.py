@@ -9,6 +9,6 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object("configFile.DevelopmentConfig")
-app.config["SESSION_COOKIE_NAME"] = 'Spotify Sesh'
+app.config["SESSION_COOKIE_NAME"] = 'spotify_sesh'
 app.register_blueprint(routes_file)
 app.register_blueprint(oauth)
