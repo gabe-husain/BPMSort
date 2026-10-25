@@ -34,3 +34,15 @@ Now you can run the program from flask_dir using ```flask run```
 Smoke tests (no Spotify account needed, the Spotify API is mocked). From the BPMSort directory:
 ```pip install pytest```
 ```python -m pytest tests/test_smoke.py```
+
+## Mac player widget
+
+A tiny floating, always-on-top, borderless version of the player (native Swift, ~170 KB, no Python needed).
+It logs in to Spotify itself with PKCE, so only the Client ID is needed.
+
+1. In the Spotify Dashboard, add the Redirect URI `http://127.0.0.1:47823/callback`
+2. Build it (uses `CLIENT_ID` from `.env` if present): ```widget/build.sh --install```
+3. Open `~/Applications/BPM Player.app` and click the widget to log in
+
+Drag anywhere to move it, drag the edges to resize. Right-click it or use the ♪ menu bar icon for
+Preferences (marquee speed and text size, Auto or Custom), Show/Hide, Log Out and Quit.

@@ -180,6 +180,12 @@ def player():
     Returns:
         rendered_template: A Flask response object containing the rendered HTML.
     """
+    # refreshes the token if needed, the player reloads forever so it will expire
+    try:
+        getToken()
+    except:
+        return redirect(url_for('oauth.login'))
+
     response = getPlaybackState(session['headers'])
     try:
         image = response["item"]["album"]['images'][0]['url']
