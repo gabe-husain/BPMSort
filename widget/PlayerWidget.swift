@@ -169,9 +169,9 @@ final class Spotify {
         let artists = (item["artists"] as? [[String: Any]])?.compactMap { $0["name"] as? String }
         let artist = artists?.first ?? (item["show"] as? [String: Any])?["name"] as? String ?? ""
 
-        // pick the image closest to 300px, big enough for any widget size
+        // highest quality cover Spotify has (usually 640px), it gets shown full screen too
         let images = album?["images"] as? [[String: Any]] ?? item["images"] as? [[String: Any]] ?? []
-        let image = images.min { abs(($0["width"] as? Int ?? 0) - 300) < abs(($1["width"] as? Int ?? 0) - 300) }
+        let image = images.max { ($0["width"] as? Int ?? 0) < ($1["width"] as? Int ?? 0) }
 
         let duration = item["duration_ms"] as? Double ?? 0
         let progress = json["progress_ms"] as? Double ?? 0
