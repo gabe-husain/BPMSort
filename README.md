@@ -44,7 +44,7 @@ It logs in to Spotify itself with PKCE, so only the Client ID is needed.
 2. Build it (uses `CLIENT_ID` from `.env` if present): ```widget/build.sh --install```
 3. Open `~/Applications/Spoti-Viz.app` and click the widget to log in
 
-Click the ♪ menu bar icon to drop the player down (click again to hide), right-click it for
+Click the vinyl menu bar icon for Show / Hide (drops the player down under it),
 Preferences (marquee speed and text size, Auto or Custom), Full Screen, Log Out and Quit.
 Drag the player anywhere to leave it floating, drag the edges to resize, triple-click for full screen (again or Esc to exit).
 It can also be opened from the Dock, Spotlight or Launchpad.

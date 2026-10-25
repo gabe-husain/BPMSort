@@ -728,7 +728,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func buildMenus() {
-        // menu bar icon: left click drops the player down under it, right click opens the menu
+        // menu bar icon, "Show / Hide Widget" drops the player down under it
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         // vinyl icon, template so it follows the light/dark menu bar
         let icon = Bundle.main.url(forResource: "vinyl", withExtension: "svg").flatMap(NSImage.init(contentsOf:))
@@ -737,10 +737,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         icon?.isTemplate = true
         icon?.accessibilityDescription = "Spoti-Viz"
         statusItem.button?.image = icon
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(statusClicked)
-        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        // a normal menu bar menu, opened by macOS itself so clicking and hovering behave like system menus
         statusMenu = makeMenu()
+        statusItem.menu = statusMenu
         player.menu = makeMenu()
 
         // gives Cmd+, / Cmd+W / Cmd+Q while the widget is focused
@@ -784,18 +783,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             panel.makeFirstResponder(player)
         }
         panel.invalidateShadow()
-    }
-
-    @objc func statusClicked() {
-        let event = NSApp.currentEvent
-        if event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true {
-            // only attach the menu for this click, otherwise every click would open it
-            statusItem.menu = statusMenu
-            statusItem.button?.performClick(nil)
-            statusItem.menu = nil
-        } else {
-            toggleWidget()
-        }
     }
 
     @objc func toggleWidget() {
