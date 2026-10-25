@@ -44,5 +44,5 @@ It logs in to Spotify itself with PKCE, so only the Client ID is needed.
 2. Build it (uses `CLIENT_ID` from `.env` if present): ```widget/build.sh --install```
 3. Open `~/Applications/BPM Player.app` and click the widget to log in
 
-Drag anywhere to move it, drag the edges to resize. Right-click it or use the ♪ menu bar icon for
+Drag anywhere to move it, drag the edges to resize, triple-click for full screen (again or Esc to exit). Right-click it or use the ♪ menu bar icon for
 Preferences (marquee speed and text size, Auto or Custom), Show/Hide, Log Out and Quit.

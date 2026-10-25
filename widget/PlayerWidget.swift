@@ -384,6 +384,11 @@ final class PlayerView: NSView {
         didSet { layer?.backgroundColor = background.cgColor }
     }
     var onClick: (() -> Void)?
+    var onTripleClick: (() -> Void)?
+    var onEscape: (() -> Void)?
+    var isFullScreen = false {
+        didSet { layer?.cornerRadius = isFullScreen ? 0 : 12 }
+    }
 
     // what Auto currently works out to, so switching to Custom starts from the same place
     private(set) var autoSpeed: Double = 10
@@ -420,15 +425,22 @@ final class PlayerView: NSView {
         if bounds.size != builtSize { rebuild() }
     }
 
-    // drag anywhere to move, a plain click logs in when logged out
+    // drag anywhere to move, a plain click logs in when logged out, triple click toggles full screen
     override func mouseDown(with event: NSEvent) {
         guard let window else { return }
+        if event.clickCount == 3 { return onTripleClick?() ?? () }
         while let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
             if next.type == .leftMouseUp { return onClick?() ?? () }
             let moved = hypot(next.locationInWindow.x - event.locationInWindow.x,
                               next.locationInWindow.y - event.locationInWindow.y)
-            if moved > 3 { return window.performDrag(with: event) }
+            if moved > 3 && !isFullScreen { return window.performDrag(with: event) }
         }
+    }
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 { onEscape?() } else { super.keyDown(with: event) } // 53 is Esc
     }
 
     static func font(_ size: CGFloat) -> NSFont {
@@ -656,6 +668,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var spotify: Spotify!
     var current: Track?
     var pollTimer: Timer?
+    var windowedFrame: NSRect? // where the widget was before going full screen
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let clientID = Bundle.main.object(forInfoDictionaryKey: "SpotifyClientID") as? String ?? ""
@@ -667,6 +680,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         prefs.onAccountChange = { [weak self] in self?.poll() }
         buildMenus()
         poll()
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // don't let the full screen frame get saved as the widget's spot
+        if let frame = windowedFrame { panel.setFrame(frame, display: false) }
     }
 
     func buildWindow() {
@@ -686,6 +704,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         player.onClick = { [weak self] in
             guard let self, !self.spotify.isLoggedIn else { return }
             self.spotify.login()
+        }
+        player.onTripleClick = { [weak self] in self?.toggleFullScreen() }
+        player.onEscape = { [weak self] in
+            if self?.windowedFrame != nil { self?.toggleFullScreen() }
         }
         panel.contentView = player
 
@@ -716,6 +738,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let menu = NSMenu()
         menu.delegate = self
         menu.addItem(withTitle: "Show / Hide Widget", action: #selector(toggleWidget), keyEquivalent: "w").target = self
+        menu.addItem(withTitle: "Full Screen", action: #selector(toggleFullScreen), keyEquivalent: "f").target = self
         menu.addItem(withTitle: "Preferences…", action: #selector(showPrefs), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "", action: #selector(toggleAccount), keyEquivalent: "").target = self
         menu.addItem(.separator())
@@ -725,6 +748,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.items.first { $0.action == #selector(toggleAccount) }?.title = spotify.isLoggedIn ? "Log Out" : "Log In…"
+        menu.items.first { $0.action == #selector(toggleFullScreen) }?.title = windowedFrame == nil ? "Full Screen" : "Exit Full Screen"
+    }
+
+    // fills the whole screen above the menu bar and Dock, no rounded corners; again (or Esc) to go back
+    @objc func toggleFullScreen() {
+        if let frame = windowedFrame {
+            windowedFrame = nil
+            player.isFullScreen = false
+            panel.level = .floating
+            panel.setFrame(frame, display: true, animate: true)
+        } else {
+            guard let screen = panel.screen ?? NSScreen.main else { return }
+            windowedFrame = panel.frame
+            player.isFullScreen = true
+            panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
+            panel.setFrame(screen.frame, display: true, animate: true)
+            panel.makeKey()
+            panel.makeFirstResponder(player)
+        }
+        panel.invalidateShadow()
     }
 
     @objc func toggleWidget() {
