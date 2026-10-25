@@ -39,6 +39,9 @@ def getCallbackUri():
     '''
     uri = os.getenv('CURRENT_URL') or DEFAULT_URL
     uri = uri.replace('://localhost', '://127.0.0.1')
+    # plain http is only allowed for loopback, hosted sites (e.g. pythonanywhere) need https
+    if uri.startswith('http://') and not uri.startswith(('http://127.0.0.1', 'http://[::1]')):
+        uri = 'https://' + uri[len('http://'):]
     if not uri.endswith('/'):
         uri += '/'
     return uri + "callback"

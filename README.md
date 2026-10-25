@@ -15,7 +15,7 @@ Client Secret From Spotify Dashboard
 
 Current URL From your hosting service, can also work as localhost or whatever port you decide to run it from. 
   
-  formatted:```CURRENT_URL ="http://127.0.0.1:5000/"```
+  formatted:```CURRENT_URL ="http://127.0.0.1:5000/"``` locally, or ```CURRENT_URL ="https://gawesome13.pythonanywhere.com/"``` when hosted
 
   Spotify no longer accepts `localhost` redirect URIs, so use `127.0.0.1` (or an HTTPS URL when hosted).
   In the Spotify Dashboard, add `<CURRENT_URL>callback` as a Redirect URI, e.g. `http://127.0.0.1:5000/callback`.

@@ -133,3 +133,8 @@ def test_expired_token_is_refreshed(app):
 def test_localhost_callback_is_rewritten_to_loopback(monkeypatch):
     monkeypatch.setenv("CURRENT_URL", "http://localhost:5000")
     assert authScripts.getCallbackUri() == "http://127.0.0.1:5000/callback"
+
+
+def test_hosted_callback_is_upgraded_to_https(monkeypatch):
+    monkeypatch.setenv("CURRENT_URL", "http://gawesome13.pythonanywhere.com/")
+    assert authScripts.getCallbackUri() == "https://gawesome13.pythonanywhere.com/callback"
