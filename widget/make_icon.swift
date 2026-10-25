@@ -26,7 +26,7 @@ func draw(_ px: Int) -> Data {
     var y = tile.maxY - 110 * s
     var row = 0
     while y > tile.minY - 100 * s {
-        let text = String(repeating: row % 2 == 0 ? "BPM • " : "PLAY • ", count: 6) as NSString
+        let text = String(repeating: row % 2 == 0 ? "SPOTI • " : "VIZ • ", count: 6) as NSString
         text.draw(at: NSPoint(x: tile.minX - CGFloat(row % 2) * 120 * s, y: y), withAttributes: attrs)
         y -= 100 * s
         row += 1

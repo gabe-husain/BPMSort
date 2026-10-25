@@ -42,7 +42,7 @@ It logs in to Spotify itself with PKCE, so only the Client ID is needed.
 
 1. In the Spotify Dashboard, add the Redirect URI `http://127.0.0.1:47823/callback`
 2. Build it (uses `CLIENT_ID` from `.env` if present): ```widget/build.sh --install```
-3. Open `~/Applications/BPM Player.app` and click the widget to log in
+3. Open `~/Applications/Spoti-Viz.app` and click the widget to log in
 
 Click the ♪ menu bar icon to drop the player down (click again to hide), right-click it for
 Preferences (marquee speed and text size, Auto or Custom), Full Screen, Log Out and Quit.

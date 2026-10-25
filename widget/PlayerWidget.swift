@@ -1,4 +1,4 @@
-// BPM Player: a tiny floating, borderless, always-on-top Mac widget of the /player page.
+// Spoti-Viz: a tiny floating, borderless, always-on-top Mac widget of the /player page.
 // Fully native (no Python, no WebKit). Talks to Spotify directly using PKCE, so no client secret.
 // Build with widget/build.sh
 import Cocoa
@@ -39,7 +39,7 @@ enum Prefs {
 }
 
 enum Keychain {
-    static let service = "com.gabehusain.bpmsort.player"
+    static let service = "com.gabehusain.spotiviz"
 
     static func query(_ key: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
@@ -257,7 +257,7 @@ final class Spotify {
             self.stopListener()
             guard let code = query["code"] else { return self.respond(connection, 400, "Login cancelled.") }
 
-            self.respond(connection, 200, "Logged in to BPM Player, you can close this tab.")
+            self.respond(connection, 200, "Logged in to Spoti-Viz, you can close this tab.")
             self.requestToken([
                 "grant_type": "authorization_code",
                 "code": code,
@@ -377,7 +377,7 @@ func palette(for image: CGImage?) -> (background: NSColor, text: NSColor) {
 
 final class PlayerView: NSView {
     var title = "Click to log in" { didSet { rebuild() } }
-    var artist = "BPM Player" { didSet { rebuild() } }
+    var artist = "Spoti-Viz" { didSet { rebuild() } }
     var cover: CGImage? { didSet { coverLayer.contents = cover; coverLayer.isHidden = cover == nil } }
     var textColor = NSColor(white: 0.35, alpha: 1) { didSet { rebuild() } }
     var background = NSColor(red: 0.098, green: 0.078, blue: 0.078, alpha: 1) {
@@ -560,7 +560,7 @@ final class PrefsController: NSWindowController {
         self.spotify = spotify
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 150),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "BPM Player Preferences"
+        window.title = "Spoti-Viz Preferences"
         super.init(window: window)
 
         for control in [speedMode, sizeMode, speedSlider, sizeSlider] as [NSControl] {
@@ -719,10 +719,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.contentView = player
 
         // remember where you put it, first launch goes to the top right corner
-        if !panel.setFrameUsingName("BPMPlayer"), let screen = NSScreen.main?.visibleFrame {
+        if !panel.setFrameUsingName("SpotiViz"), let screen = NSScreen.main?.visibleFrame {
             panel.setFrameOrigin(NSPoint(x: screen.maxX - defaultSize.width - 16, y: screen.maxY - defaultSize.height - 16))
         }
-        panel.setFrameAutosaveName("BPMPlayer")
+        panel.setFrameAutosaveName("SpotiViz")
         panel.orderFrontRegardless()
         panel.invalidateShadow()
     }
@@ -730,7 +730,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func buildMenus() {
         // menu bar icon: left click drops the player down under it, right click opens the menu
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "music.note", accessibilityDescription: "BPM Player")
+        // vinyl icon, template so it follows the light/dark menu bar
+        let icon = Bundle.main.url(forResource: "vinyl", withExtension: "svg").flatMap(NSImage.init(contentsOf:))
+            ?? NSImage(systemSymbolName: "music.note", accessibilityDescription: nil)
+        icon?.size = NSSize(width: 16, height: 16)
+        icon?.isTemplate = true
+        icon?.accessibilityDescription = "Spoti-Viz"
+        statusItem.button?.image = icon
         statusItem.button?.target = self
         statusItem.button?.action = #selector(statusClicked)
         statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -752,7 +758,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(withTitle: "Preferences…", action: #selector(showPrefs), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "", action: #selector(toggleAccount), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit BPM Player", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Spoti-Viz", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         return menu
     }
 
@@ -832,7 +838,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 self.schedule(10)
             case .loggedOut:
                 self.current = nil
-                self.showPlaceholder("Click to log in", "BPM Player")
+                self.showPlaceholder("Click to log in", "Spoti-Viz")
             case .failed(let retryAfter):
                 self.schedule(max(3, retryAfter))
             }
