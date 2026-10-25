@@ -664,6 +664,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var panel: WidgetPanel!
     var player: PlayerView!
     var statusItem: NSStatusItem!
+    var statusMenu: NSMenu!
     var prefs: PrefsController!
     var spotify: Spotify!
     var current: Track?
@@ -680,6 +681,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         prefs.onAccountChange = { [weak self] in self?.poll() }
         buildMenus()
         poll()
+    }
+
+    // clicking the Dock (or Finder) icon while it's running brings the widget back
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        panel.orderFrontRegardless()
+        return false
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -721,10 +728,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func buildMenus() {
-        // menu bar icon, there's no Dock icon
+        // menu bar icon: left click drops the player down under it, right click opens the menu
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "music.note", accessibilityDescription: "BPM Player")
-        statusItem.menu = makeMenu()
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(statusClicked)
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        statusMenu = makeMenu()
         player.menu = makeMenu()
 
         // gives Cmd+, / Cmd+W / Cmd+Q while the widget is focused
@@ -770,8 +780,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         panel.invalidateShadow()
     }
 
+    @objc func statusClicked() {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseUp || event?.modifierFlags.contains(.control) == true {
+            // only attach the menu for this click, otherwise every click would open it
+            statusItem.menu = statusMenu
+            statusItem.button?.performClick(nil)
+            statusItem.menu = nil
+        } else {
+            toggleWidget()
+        }
+    }
+
     @objc func toggleWidget() {
-        if panel.isVisible { panel.orderOut(nil) } else { panel.orderFrontRegardless() }
+        if panel.isVisible { return panel.orderOut(nil) }
+        // drop down under the menu bar icon, drag it anywhere to leave it floating there
+        if windowedFrame == nil, let button = statusItem.button?.window?.frame,
+           let screen = statusItem.button?.window?.screen?.visibleFrame {
+            let size = panel.frame.size
+            let x = min(max(button.midX - size.width / 2, screen.minX + 8), screen.maxX - size.width - 8)
+            panel.setFrameOrigin(NSPoint(x: x, y: button.minY - size.height - 6))
+        }
+        panel.orderFrontRegardless()
     }
 
     @objc func showPrefs() {

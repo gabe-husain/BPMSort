@@ -14,9 +14,14 @@ CLIENT_ID="${CLIENT_ID:-$(grep -s '^CLIENT_ID' "$REPO/.env" | cut -d= -f2- | tr 
 CLIENT_ID="${CLIENT_ID:-b0974a4308d2409ba90a3694febda89f}"
 
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -Osize "$WIDGET_DIR/PlayerWidget.swift" -o "$APP/Contents/MacOS/BPMPlayer"
 strip -x "$APP/Contents/MacOS/BPMPlayer"
+
+ICONSET="$WIDGET_DIR/build/AppIcon.iconset"
+swift "$WIDGET_DIR/make_icon.swift" "$ICONSET"
+iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+rm -rf "$ICONSET"
 
 cat > "$APP/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -25,6 +30,7 @@ cat > "$APP/Contents/Info.plist" <<EOF
 <dict>
     <key>CFBundleName</key><string>BPM Player</string>
     <key>CFBundleIdentifier</key><string>com.gabehusain.bpmsort.player</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleExecutable</key><string>BPMPlayer</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>1.0</string>
